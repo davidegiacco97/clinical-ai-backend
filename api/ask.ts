@@ -317,8 +317,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // RAG: clinical_knowledge_base (NUOVO, CON EMBEDDINGS + MAP/FONTI)
     const ragContext = await getRagContext(query, category);
 
-    // PUBMED RAG 2.0 (ABSTRACT SINTETICI) – SEMPRE
-    const pubmedEvidence = await fetchPubMedEvidence(query);
+// PUBMED RAG 2.0 (ABSTRACT SINTETICI) – SEMPRE
+const pubmedEvidence = await fetchPubMedEvidence(query);
 
 // OPENAI CALL – modello come nel tuo codice
 const openaiRes = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -374,8 +374,8 @@ await supabase.from("ai_cache").insert({
 });
 
 return res.status(200).json({ source: "live", category, answer });
-  } catch (err) {
-    console.error("ask_ai error:", err);
-    return res.status(500).json({ error: "Internal server error" });
-  }
+} catch (err) {
+  console.error("ask_ai error:", err);
+  return res.status(500).json({ error: "Internal server error" });
+}
 }
