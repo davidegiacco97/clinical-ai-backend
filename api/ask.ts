@@ -320,21 +320,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // PUBMED RAG 2.0 (ABSTRACT SINTETICI) – SEMPRE
     const pubmedEvidence = await fetchPubMedEvidence(query);
 
-    // OPENAI CALL – modello come nel tuo codice
-    const openaiRes = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${OPENAI_API_KEY}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        model: "gpt-5-nano",
-        temperature: 0.2,
-        messages: [
-  { role: "system", content: SYSTEM_PROMPT },
-  {
-    role: "user",
-    content: `
+// OPENAI CALL – modello come nel tuo codice
+const openaiRes = await fetch("https://api.openai.com/v1/chat/completions", {
+  method: "POST",
+  headers: {
+    "Authorization": `Bearer ${OPENAI_API_KEY}`,
+    "Content-Type": "application/json"
+  },
+  body: JSON.stringify({
+    model: "gpt-5-nano",
+    temperature: 0.2,
+    messages: [
+      { role: "system", content: SYSTEM_PROMPT },
+      {
+        role: "user",
+        content: `
 DOMANDA:
 ${query}
 
@@ -344,10 +344,10 @@ ${ragContext}
 EVIDENZE DA PUBMED (ABSTRACT SINTETICI, SOLO PER CONTESTO):
 ${pubmedEvidence}
 `.trim()
-  }
-]
-      })
-    });
+      }
+    ]
+  })
+});
 
 // Leggo la risposta grezza
 const raw = await openaiRes.text();
@@ -366,14 +366,14 @@ try {
 const answer =
   aiData?.choices?.[0]?.message?.content || "Errore generazione risposta";
 
-    // SAVE CACHE
-    await supabase.from("ai_cache").insert({
-      query_hash: q,
-      category,
-      response: answer
-    });
+// SAVE CACHE
+await supabase.from("ai_cache").insert({
+  query_hash: q,
+  category,
+  response: answer
+});
 
-    return res.status(200).json({ source: "live", category, answer });
+return res.status(200).json({ source: "live", category, answer });
   } catch (err) {
     console.error("ask_ai error:", err);
     return res.status(500).json({ error: "Internal server error" });
