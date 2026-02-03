@@ -1,3 +1,24 @@
+console.log("CHECKPOINT 1: detectCategory start");
+const category = await detectCategory(query);
+console.log("CHECKPOINT 1 OK:", category);
+
+console.log("CHECKPOINT 2: forbidden check start");
+if (await isForbiddenQuery(query)) {
+  console.log("CHECKPOINT 2 BLOCKED: forbidden");
+  return res.status(400).json({ error: "Forbidden query" });
+}
+console.log("CHECKPOINT 2 OK");
+
+console.log("CHECKPOINT 3: RAG start");
+const ragContext = await getRagContext(query);
+console.log("CHECKPOINT 3 OK");
+
+console.log("CHECKPOINT 4: PubMed start");
+const pubmedEvidence = await fetchPubMedEvidence(query);
+console.log("CHECKPOINT 4 OK");
+
+// QUI ARRIVA LA FETCH OPENAI
+console.log("CHECKPOINT 5: OpenAI fetch start");
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
 
