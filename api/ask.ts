@@ -1,24 +1,3 @@
-console.log("CHECKPOINT 1: detectCategory start");
-const category = await detectCategory(query);
-console.log("CHECKPOINT 1 OK:", category);
-
-console.log("CHECKPOINT 2: forbidden check start");
-if (await isForbiddenQuery(query)) {
-  console.log("CHECKPOINT 2 BLOCKED: forbidden");
-  return res.status(400).json({ error: "Forbidden query" });
-}
-console.log("CHECKPOINT 2 OK");
-
-console.log("CHECKPOINT 3: RAG start");
-const ragContext = await getRagContext(query);
-console.log("CHECKPOINT 3 OK");
-
-console.log("CHECKPOINT 4: PubMed start");
-const pubmedEvidence = await fetchPubMedEvidence(query);
-console.log("CHECKPOINT 4 OK");
-
-// QUI ARRIVA LA FETCH OPENAI
-console.log("CHECKPOINT 5: OpenAI fetch start");
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
 
@@ -317,29 +296,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     // CATEGORY DETECTION
-    const category = detectCategory(q);
+console.log("CHECKPOINT 1: detectCategory start");
+const category = await detectCategory(query);
+console.log("CHECKPOINT 1 OK:", category);
 
-    // CACHE CHECK (30 DAYS)
-    const limitDate = new Date(Date.now() - 30 * 86400000).toISOString();
+console.log("CHECKPOINT 2: forbidden check start");
+if (await isForbiddenQuery(query)) {
+  console.log("CHECKPOINT 2 BLOCKED: forbidden");
+  return res.status(400).json({ error: "Forbidden query" });
+}
+console.log("CHECKPOINT 2 OK");
 
-    const { data: cached } = await supabase
-      .from("ai_cache")
-      .select("response")
-      .eq("query_hash", q)
-      .gte("created_at", limitDate)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
+console.log("CHECKPOINT 3: RAG start");
+const ragContext = await getRagContext(query);
+console.log("CHECKPOINT 3 OK");
 
-    if (cached?.response) {
-      return res.status(200).json({ source: "cache", category, answer: cached.response });
-    }
-
-    // RAG: clinical_knowledge_base (NUOVO, CON EMBEDDINGS + MAP/FONTI)
-    const ragContext = await getRagContext(query, category);
-
-// PUBMED RAG 2.0 (ABSTRACT SINTETICI) – SEMPRE
+console.log("CHECKPOINT 4: PubMed start");
 const pubmedEvidence = await fetchPubMedEvidence(query);
+console.log("CHECKPOINT 4 OK");
+
+console.log("CHECKPOINT 5: OpenAI fetch start");
 
 // OPENAI CALL – modello come nel tuo codice
 const openaiRes = await fetch("https://api.openai.com/v1/chat/completions", {
