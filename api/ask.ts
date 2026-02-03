@@ -331,10 +331,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         model: "gpt-5-nano",
         temperature: 0.2,
         messages: [
-          { role: "system", content: SYSTEM_PROMPT },
-          {
-            role: "user",
-            content: `
+  { role: "system", content: SYSTEM_PROMPT },
+  {
+    role: "user",
+    content: `
 DOMANDA:
 ${query}
 
@@ -344,8 +344,8 @@ ${ragContext}
 EVIDENZE DA PUBMED (ABSTRACT SINTETICI, SOLO PER CONTESTO):
 ${pubmedEvidence}
 `.trim()
-          }
-        ]
+  }
+]
       })
     });
 
