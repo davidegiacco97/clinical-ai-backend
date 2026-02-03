@@ -1,10 +1,3 @@
-console.log("ENV CHECK", {
-  SUPABASE_URL: !!SUPABASE_URL,
-  SERVICE_ROLE: !!SUPABASE_SERVICE_ROLE_KEY,
-  OPENAI_KEY: !!OPENAI_API_KEY,
-  PUBMED_EMAIL
-});
-
 console.log("ENV CHECK:", {
   url: Deno.env.get("SUPABASE_URL"),
   role: Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ? "OK" : "MISSING"
@@ -18,6 +11,13 @@ const { data, error } = await supabase
 console.log("SUPABASE TEST:", { data, error });
 import { serve } from "https://deno.land/std/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+console.log("ENV:", {
+  SUPABASE_URL: process.env.SUPABASE_URL,
+  SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
+  OPENAI_API_KEY: process.env.OPENAI_API_KEY,
+  PUBMED_EMAIL: process.env.PUBMED_EMAIL,
+  PUBMED_TOOL: process.env.PUBMED_TOOL,
+
 
 // ─────────────────────────────────────────────
 // ENV VARIABLES (Supabase + OpenAI + PubMed)
