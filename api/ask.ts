@@ -1,36 +1,22 @@
-console.log("ENV CHECK:", {
-  url: Deno.env.get("SUPABASE_URL"),
-  role: Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ? "OK" : "MISSING"
-});
-
-const { data, error } = await supabase
-  .from("document_chunks")
-  .select("id")
-  .limit(1);
-
-console.log("SUPABASE TEST:", { data, error });
-import { serve } from "https://deno.land/std/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-console.log("ENV:", {
-  SUPABASE_URL: process.env.SUPABASE_URL,
-  SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
-  OPENAI_API_KEY: process.env.OPENAI_API_KEY,
-  PUBMED_EMAIL: process.env.PUBMED_EMAIL,
-  PUBMED_TOOL: process.env.PUBMED_TOOL,
-
+import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { createClient } from '@supabase/supabase-js';
 
 // ─────────────────────────────────────────────
 // ENV VARIABLES (Supabase + OpenAI + PubMed)
 // ─────────────────────────────────────────────
-const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY")!;
-const PUBMED_EMAIL = Deno.env.get("PUBMED_EMAIL") || "your@email.com";
+const SUPABASE_URL = process.env.SUPABASE_URL!;
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY!;
+const PUBMED_EMAIL = process.env.PUBMED_EMAIL || "your@email.com";
 
-// ─────────────────────────────────────────────
-// Supabase client
-// ─────────────────────────────────────────────
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+console.log("ENV CHECK:", {
+  SUPABASE_URL,
+  SUPABASE_SERVICE_ROLE_KEY: SUPABASE_SERVICE_ROLE_KEY ? "OK" : "MISSING",
+  OPENAI_API_KEY: OPENAI_API_KEY ? "OK" : "MISSING",
+  PUBMED_EMAIL
+});
 
 // ─────────────────────────────────────────────
 // SYSTEM PROMPT (CLINICAL TUTOR) – TUO ORIGINALE
@@ -140,9 +126,7 @@ function isForbiddenQuery(q: string): boolean {
 }
 
 // ─────────────────────────────────────────────
-// HELPER: embedding + RAG con Supabase
-// (richiede una funzione RPC tipo "match_document_chunks"
-// che restituisca i chunk più simili)
+// HELPER: embedding (OpenAI)
 // ─────────────────────────────────────────────
 async function getEmbedding(text: string): Promise<number[] | null> {
   const res = await fetch("https://api.openai.com/v1/embeddings", {
@@ -162,33 +146,90 @@ async function getEmbedding(text: string): Promise<number[] | null> {
   return data.data?.[0]?.embedding || null;
 }
 
-async function getRagContext(query: string, category: string): Promise<string> {
-  // 1) Provo con embeddings
-  const embedding = await getEmbedding(query);
-  if (embedding) {
-    const { data: matches } = await supabase.rpc("match_document_chunks", {
-      query_embedding: embedding,
-      match_count: 8,
-      filter_category: category === "general" ? null : category,
-    });
+// ─────────────────────────────────────────────
+// HELPER: cosine similarity (per RAG senza RPC)
+// ─────────────────────────────────────────────
+function cosineSimilarity(a: number[], b: number[]): number {
+  const dot = a.reduce((sum, v, i) => sum + v * b[i], 0);
+  const normA = Math.sqrt(a.reduce((sum, v) => sum + v * v, 0));
+  const normB = Math.sqrt(b.reduce((sum, v) => sum + v * v, 0));
+  if (!normA || !normB) return 0;
+  return dot / (normA * normB);
+}
 
-    if (matches && matches.length > 0) {
-      return matches.map((m: any) => m.content).join("\n---\n");
+// ─────────────────────────────────────────────
+// HELPER: RAG con clinical_knowledge_base + map/fonti
+// ─────────────────────────────────────────────
+async function getRagContext(query: string, category: string): Promise<string> {
+  const embedding = await getEmbedding(query);
+
+  // 1) Nuovo metodo: embeddings su clinical_knowledge_base
+  if (embedding) {
+    const { data, error } = await supabase
+      .from("clinical_knowledge_base")
+      .select("id, content, category, embedding")
+      .not("embedding", "is", null);
+
+    if (error || !data) {
+      console.error("clinical_knowledge_base error:", error);
+    } else {
+      const filtered = category === "general"
+        ? data
+        : data.filter((row: any) => row.category === category);
+
+      const scored = filtered.map((row: any) => ({
+        ...row,
+        score: cosineSimilarity(embedding, row.embedding as number[])
+      }));
+
+      const top = scored
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 8);
+
+      if (top.length > 0) {
+        // opzionale: recupero fonti collegate via evidence_map / evidence_sources
+        const ids = top.map((t: any) => t.id);
+        let sourcesBlock = "";
+
+        const { data: mapRows } = await supabase
+          .from("evidence_map")
+          .select("knowledge_id, source_id")
+          .in("knowledge_id", ids);
+
+        if (mapRows && mapRows.length > 0) {
+          const sourceIds = Array.from(new Set(mapRows.map((m: any) => m.source_id)));
+          const { data: sources } = await supabase
+            .from("evidence_sources")
+            .select("id, title, citation, url")
+            .in("id", sourceIds);
+
+          if (sources && sources.length > 0) {
+            sourcesBlock =
+              "\n\n--- FONTI INTERNE COLLEGATE ---\n" +
+              sources
+                .map((s: any) => `• ${s.title || "Senza titolo"} – ${s.citation || ""} ${s.url || ""}`)
+                .join("\n");
+          }
+        }
+
+        const contentBlock = top.map((m: any) => m.content).join("\n---\n");
+        return contentBlock + sourcesBlock;
+      }
     }
   }
 
-  // 2) Fallback: vecchio metodo per categoria
+  // 2) Fallback: vecchio metodo per categoria (senza embeddings)
   const { data: chunks } = await supabase
-    .from("document_chunks")
+    .from("clinical_knowledge_base")
     .select("content")
     .eq("category", category)
     .limit(6);
 
-  return chunks?.map(c => c.content).join("\n---\n") || "";
+  return chunks?.map((c: any) => c.content).join("\n---\n") || "";
 }
 
 // ─────────────────────────────────────────────
-// HELPER: PubMed RAG 2.0 (abstract sintetici)
+// HELPER: PubMed RAG 2.0 (abstract sintetici, SEMPRE)
 // ─────────────────────────────────────────────
 async function fetchPubMedEvidence(query: string): Promise<string> {
   try {
@@ -210,7 +251,6 @@ async function fetchPubMedEvidence(query: string): Promise<string> {
     const efRes = await fetch(efetchUrl);
     const rawText = await efRes.text();
 
-    // Spezzetto in blocchi (grezzo ma efficace)
     const abstracts = rawText
       .split(/\n\n+/)
       .map(s => s.trim())
@@ -230,40 +270,35 @@ async function fetchPubMedEvidence(query: string): Promise<string> {
 }
 
 // ─────────────────────────────────────────────
-// MAIN HANDLER
+// MAIN HANDLER (versione Vercel, non Deno serve)
 // ─────────────────────────────────────────────
-serve(async (req) => {
+export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
-    const body = await req.json().catch(() => null);
-    if (!body?.query) {
-      return new Response(JSON.stringify({ error: "Missing query" }), { status: 400 });
+    if (req.method !== "POST") {
+      return res.status(405).json({ error: "Method not allowed" });
     }
 
-    const query = body.query.trim();
+    const body = req.body as any;
+    if (!body?.query) {
+      return res.status(400).json({ error: "Missing query" });
+    }
+
+    const query = String(body.query).trim();
     const q = query.toLowerCase();
 
-    // ─────────────────────────────────────────
     // BLOCCO: solo definizioni cliniche
-    // ─────────────────────────────────────────
     if (isForbiddenQuery(q)) {
-      return new Response(
-        JSON.stringify({
-          error:
-            "Questa modalità fornisce solo definizioni cliniche strutturate. " +
-            "Per domande, confronti o decision-making utilizza la modalità avanzata."
-        }),
-        { status: 400 }
-      );
+      return res.status(400).json({
+        error:
+          "Questa modalità fornisce solo definizioni cliniche strutturate. " +
+          "Per domande, confronti o decision-making utilizza la modalità avanzata."
+      });
     }
 
-    // ─────────────────────────────────────────
-    // CATEGORY DETECTION (NUOVA)
-// ─────────────────────────────────────────
+    // CATEGORY DETECTION
     const category = detectCategory(q);
 
-    // ─────────────────────────────────────────
     // CACHE CHECK (30 DAYS)
-// ─────────────────────────────────────────
     const limitDate = new Date(Date.now() - 30 * 86400000).toISOString();
 
     const { data: cached } = await supabase
@@ -276,25 +311,16 @@ serve(async (req) => {
       .maybeSingle();
 
     if (cached?.response) {
-      return new Response(
-        JSON.stringify({ source: "cache", category, answer: cached.response }),
-        { status: 200 }
-      );
+      return res.status(200).json({ source: "cache", category, answer: cached.response });
     }
 
-    // ─────────────────────────────────────────
-    // RAG: DOCUMENT CHUNKS (NUOVO, CON EMBEDDINGS)
-// ─────────────────────────────────────────
+    // RAG: clinical_knowledge_base (NUOVO, CON EMBEDDINGS + MAP/FONTI)
     const ragContext = await getRagContext(query, category);
 
-    // ─────────────────────────────────────────
-    // PUBMED RAG 2.0 (ABSTRACT SINTETICI)
-// ─────────────────────────────────────────
+    // PUBMED RAG 2.0 (ABSTRACT SINTETICI) – SEMPRE
     const pubmedEvidence = await fetchPubMedEvidence(query);
 
-    // ─────────────────────────────────────────
-    // OPENAI CALL
-// ─────────────────────────────────────────
+    // OPENAI CALL – modello come nel tuo codice
     const openaiRes = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -324,27 +350,19 @@ ${pubmedEvidence}
     });
 
     const aiData = await openaiRes.json();
-    const answer = aiData.choices?.[0]?.message?.content || "Errore generazione risposta";
+    const answer =
+      aiData.choices?.[0]?.message?.content || "Errore generazione risposta";
 
-    // ─────────────────────────────────────────
     // SAVE CACHE
-// ─────────────────────────────────────────
     await supabase.from("ai_cache").insert({
       query_hash: q,
       category,
       response: answer
     });
 
-    return new Response(
-      JSON.stringify({ source: "live", category, answer }),
-      { status: 200 }
-    );
-
+    return res.status(200).json({ source: "live", category, answer });
   } catch (err) {
     console.error("ask_ai error:", err);
-    return new Response(
-      JSON.stringify({ error: "Internal server error" }),
-      { status: 500 }
-    );
+    return res.status(500).json({ error: "Internal server error" });
   }
-});
+}
