@@ -352,6 +352,9 @@ ${pubmedEvidence}
     const aiData = await openaiRes.json();
     const answer =
       aiData.choices?.[0]?.message?.content || "Errore generazione risposta";
+    const raw = await openaiRes.text();
+console.log("OPENAI RAW ERROR:", raw);
+const aiData = JSON.parse(raw);
 
     // SAVE CACHE
     await supabase.from("ai_cache").insert({
