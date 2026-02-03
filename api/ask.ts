@@ -349,12 +349,22 @@ ${pubmedEvidence}
       })
     });
 
-    const aiData = await openaiRes.json();
-    const answer =
-      aiData.choices?.[0]?.message?.content || "Errore generazione risposta";
-    const raw = await openaiRes.text();
-console.log("OPENAI RAW ERROR:", raw);
-const aiData = JSON.parse(raw);
+// Leggo la risposta grezza
+const raw = await openaiRes.text();
+console.log("OPENAI RAW RESPONSE:", raw);
+
+// Provo a fare il parse
+let aiData;
+try {
+  aiData = JSON.parse(raw);
+} catch (e) {
+  console.error("JSON PARSE ERROR:", e);
+  return res.status(500).json({ error: "Invalid JSON from OpenAI", raw });
+}
+
+// Estraggo la risposta se esiste
+const answer =
+  aiData?.choices?.[0]?.message?.content || "Errore generazione risposta";
 
     // SAVE CACHE
     await supabase.from("ai_cache").insert({
