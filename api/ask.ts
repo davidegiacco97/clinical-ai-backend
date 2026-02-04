@@ -295,43 +295,52 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
-    // CATEGORY DETECTION
-console.log("CHECKPOINT 1: detectCategory start");
-const category = await detectCategory(query);
-console.log("CHECKPOINT 1 OK:", category);
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  try {
+    const { query } = req.body;
 
-console.log("CHECKPOINT 2: forbidden check start");
-if (await isForbiddenQuery(query)) {
-  console.log("CHECKPOINT 2 BLOCKED: forbidden");
-  return res.status(400).json({ error: "Forbidden query" });
-}
-console.log("CHECKPOINT 2 OK");
+    console.log("CHECKPOINT 0: handler start");
 
-console.log("CHECKPOINT 3: RAG start");
-const ragContext = await getRagContext(query);
-console.log("CHECKPOINT 3 OK");
+    // 1. CATEGORY DETECTION
+    console.log("CHECKPOINT 1: detectCategory start");
+    const category = await detectCategory(query);
+    console.log("CHECKPOINT 1 OK:", category);
 
-console.log("CHECKPOINT 4: PubMed start");
-const pubmedEvidence = await fetchPubMedEvidence(query);
-console.log("CHECKPOINT 4 OK");
+    // 2. FORBIDDEN QUERY CHECK
+    console.log("CHECKPOINT 2: forbidden check start");
+    if (await isForbiddenQuery(query)) {
+      console.log("CHECKPOINT 2 BLOCKED: forbidden");
+      return res.status(400).json({ error: "Forbidden query" });
+    }
+    console.log("CHECKPOINT 2 OK");
 
-console.log("CHECKPOINT 5: OpenAI fetch start");
+    // 3. RAG CONTEXT
+    console.log("CHECKPOINT 3: RAG start");
+    const ragContext = await getRagContext(query);
+    console.log("CHECKPOINT 3 OK");
 
-// OPENAI CALL – modello come nel tuo codice
-const openaiRes = await fetch("https://api.openai.com/v1/chat/completions", {
-  method: "POST",
-  headers: {
-    "Authorization": `Bearer ${OPENAI_API_KEY}`,
-    "Content-Type": "application/json"
-  },
-  body: JSON.stringify({
-    model: "gpt-5-nano",
-    temperature: 0.2,
-    messages: [
-      { role: "system", content: SYSTEM_PROMPT },
-      {
-        role: "user",
-        content: `
+    // 4. PUBMED EVIDENCE
+    console.log("CHECKPOINT 4: PubMed start");
+    const pubmedEvidence = await fetchPubMedEvidence(query);
+    console.log("CHECKPOINT 4 OK");
+
+    // 5. OPENAI CALL
+    console.log("CHECKPOINT 5: OpenAI fetch start");
+
+    const openaiRes = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${OPENAI_API_KEY}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        model: "gpt-5-nano",
+        temperature: 0.2,
+        messages: [
+          { role: "system", content: SYSTEM_PROMPT },
+          {
+            role: "user",
+            content: `
 DOMANDA:
 ${query}
 
@@ -341,38 +350,40 @@ ${ragContext}
 EVIDENZE DA PUBMED (ABSTRACT SINTETICI, SOLO PER CONTESTO):
 ${pubmedEvidence}
 `.trim()
-      }
-    ]
-  })
-});
+          }
+        ]
+      })
+    });
 
-// Leggo la risposta grezza
-const raw = await openaiRes.text();
-console.log("OPENAI RAW RESPONSE:", raw);
+    // 6. RAW RESPONSE LOG
+    const raw = await openaiRes.text();
+    console.log("OPENAI RAW RESPONSE:", raw);
 
-// Provo a fare il parse
-let aiData;
-try {
-  aiData = JSON.parse(raw);
-} catch (e) {
-  console.error("JSON PARSE ERROR:", e);
-  return res.status(500).json({ error: "Invalid JSON from OpenAI", raw });
-}
+    // 7. PARSE JSON
+    let aiData;
+    try {
+      aiData = JSON.parse(raw);
+    } catch (e) {
+      console.error("JSON PARSE ERROR:", e);
+      return res.status(500).json({ error: "Invalid JSON from OpenAI", raw });
+    }
 
-// Estraggo la risposta se esiste
-const answer =
-  aiData?.choices?.[0]?.message?.content || "Errore generazione risposta";
+    // 8. EXTRACT ANSWER
+    const answer =
+      aiData?.choices?.[0]?.message?.content || "Errore generazione risposta";
 
-// SAVE CACHE
-await supabase.from("ai_cache").insert({
-  query_hash: q,
-  category,
-  response: answer
-});
+    // 9. SAVE CACHE
+    await supabase.from("ai_cache").insert({
+      query_hash: q,
+      category,
+      response: answer
+    });
 
-return res.status(200).json({ source: "live", category, answer });
-} catch (err) {
-  console.error("ask_ai error:", err);
-  return res.status(500).json({ error: "Internal server error" });
-}
+    // 10. RETURN RESPONSE
+    return res.status(200).json({ source: "live", category, answer });
+
+  } catch (err) {
+    console.error("ask_ai error:", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
 }
