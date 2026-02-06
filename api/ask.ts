@@ -295,38 +295,32 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
-  try {
-    const { query } = req.body;
+    // CATEGORY DETECTION
+    const category = detectCategory(q);
 
-    console.log("CHECKPOINT 0: handler start");
+    // CACHE CHECK (30 DAYS)
+    const limitDate = new Date(Date.now() - 30 * 86400000).toISOString();
 
-    // 1. CATEGORY DETECTION
-    console.log("CHECKPOINT 1: detectCategory start");
-    const category = await detectCategory(query);
-    console.log("CHECKPOINT 1 OK:", category);
+    const { data: cached } = await supabase
+      .from("ai_cache")
+      .select("response")
+      .eq("query_hash", q)
+      .gte("created_at", limitDate)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
-    // 2. FORBIDDEN QUERY CHECK
-    console.log("CHECKPOINT 2: forbidden check start");
-    if (await isForbiddenQuery(query)) {
-      console.log("CHECKPOINT 2 BLOCKED: forbidden");
-      return res.status(400).json({ error: "Forbidden query" });
+    if (cached?.response) {
+      return res.status(200).json({ source: "cache", category, answer: cached.response });
     }
-    console.log("CHECKPOINT 2 OK");
 
-    // 3. RAG CONTEXT
-    console.log("CHECKPOINT 3: RAG start");
-    const ragContext = await getRagContext(query);
-    console.log("CHECKPOINT 3 OK");
+    // RAG: clinical_knowledge_base (NUOVO, CON EMBEDDINGS + MAP/FONTI)
+    const ragContext = await getRagContext(query, category);
 
-    // 4. PUBMED EVIDENCE
-    console.log("CHECKPOINT 4: PubMed start");
+    // PUBMED RAG 2.0 (ABSTRACT SINTETICI) – SEMPRE
     const pubmedEvidence = await fetchPubMedEvidence(query);
-    console.log("CHECKPOINT 4 OK");
 
-    // 5. OPENAI CALL
-    console.log("CHECKPOINT 5: OpenAI fetch start");
-
+    // OPENAI CALL – modello come nel tuo codice
     const openaiRes = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -336,11 +330,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       body: JSON.stringify({
         model: "gpt-5-nano",
         temperature: 0.2,
-        messages: [
-          { role: "system", content: SYSTEM_PROMPT },
-          {
-            role: "user",
-            content: `
+messages: [
+  { role: "system", content: SYSTEM_PROMPT },
+  {
+    role: "user",
+    content: `
 DOMANDA:
 ${query}
 
@@ -350,38 +344,17 @@ ${ragContext}
 EVIDENZE DA PUBMED (ABSTRACT SINTETICI, SOLO PER CONTESTO):
 ${pubmedEvidence}
 `.trim()
-          }
-        ]
-      })
-    });
+  }
+]
 
-    // 6. RAW RESPONSE LOG
-    const raw = await openaiRes.text();
-    console.log("OPENAI RAW RESPONSE:", raw);
-
-    // 7. PARSE JSON
-    let aiData;
-    try {
-      aiData = JSON.parse(raw);
-    } catch (e) {
-      console.error("JSON PARSE ERROR:", e);
-      return res.status(500).json({ error: "Invalid JSON from OpenAI", raw });
-    }
-
-    // 8. EXTRACT ANSWER
-    const answer =
-      aiData?.choices?.[0]?.message?.content || "Errore generazione risposta";
-
-    // 9. SAVE CACHE
+    // SAVE CACHE
     await supabase.from("ai_cache").insert({
       query_hash: q,
       category,
       response: answer
     });
 
-    // 10. RETURN RESPONSE
     return res.status(200).json({ source: "live", category, answer });
-
   } catch (err) {
     console.error("ask_ai error:", err);
     return res.status(500).json({ error: "Internal server error" });
