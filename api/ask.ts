@@ -314,13 +314,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(200).json({ source: "cache", category, answer: cached.response });
     }
 
-    // RAG: clinical_knowledge_base (NUOVO, CON EMBEDDINGS + MAP/FONTI)
+    // RAG: clinical_knowledge_base
     const ragContext = await getRagContext(query, category);
 
-    // PUBMED RAG 2.0 (ABSTRACT SINTETICI) – SEMPRE
+    // PUBMED RAG 2.0
     const pubmedEvidence = await fetchPubMedEvidence(query);
 
-    // OPENAI CALL – modello come nel tuo codice
+    // OPENAI CALL
     const openaiRes = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -330,11 +330,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       body: JSON.stringify({
         model: "gpt-5-nano",
         temperature: 0.2,
-messages: [
-  { role: "system", content: SYSTEM_PROMPT },
-  {
-    role: "user",
-    content: `
+        messages: [
+          { role: "system", content: SYSTEM_PROMPT },
+          {
+            role: "user",
+            content: `
 DOMANDA:
 ${query}
 
@@ -344,8 +344,27 @@ ${ragContext}
 EVIDENZE DA PUBMED (ABSTRACT SINTETICI, SOLO PER CONTESTO):
 ${pubmedEvidence}
 `.trim()
-  }
-]
+          }
+        ]
+      })
+    });
+
+    // RAW RESPONSE
+    const raw = await openaiRes.text();
+    console.log("OPENAI RAW RESPONSE:", raw);
+
+    // PARSE JSON
+    let aiData;
+    try {
+      aiData = JSON.parse(raw);
+    } catch (e) {
+      console.error("JSON PARSE ERROR:", e);
+      return res.status(500).json({ error: "Invalid JSON from OpenAI", raw });
+    }
+
+    // EXTRACT ANSWER
+    const answer =
+      aiData?.choices?.[0]?.message?.content || "Errore generazione risposta";
 
     // SAVE CACHE
     await supabase.from("ai_cache").insert({
@@ -354,7 +373,9 @@ ${pubmedEvidence}
       response: answer
     });
 
+    // RETURN
     return res.status(200).json({ source: "live", category, answer });
+
   } catch (err) {
     console.error("ask_ai error:", err);
     return res.status(500).json({ error: "Internal server error" });
