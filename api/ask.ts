@@ -329,7 +329,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       },
       body: JSON.stringify({
         model: "gpt-5-nano",
-        temperature: 0.2,
+        temperature: 1,
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
           {
