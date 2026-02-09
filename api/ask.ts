@@ -57,6 +57,8 @@ Segui SEMPRE e IN QUESTO ORDINE la seguente struttura:
 8. Esempio di ragionamento clinico (scenario → osservazione → decisione → outcome)
 
 ⚠️ FORMATO DI OUTPUT
+- Separa ogni punto in una card ben distinta l'una dall'altra.
+- Numera bene i punti della risposta.
 - Nessun testo fuori dal JSON.
 - Nessuna spiegazione.
 - Nessuna introduzione.
