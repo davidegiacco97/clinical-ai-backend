@@ -413,32 +413,23 @@ ${pubmedEvidence}
       return res.status(500).json({ error: "Invalid JSON from OpenAI", raw });
     }
 
-// EXTRACT CONTENT STRING
-const content =
-  aiData?.choices?.[0]?.message?.content || "";
+    // EXTRACT ANSWER
+    const answer =
+      aiData?.choices?.[0]?.message?.content || "Errore generazione risposta";
 
-// TRY PARSE JSON FROM MODEL
-let structured;
+    // SAVE CACHE
+    await supabase.from("ai_cache").insert({
+      query_hash: q,
+      category,
+      response: answer
+    });
 
-try {
-  structured = JSON.parse(content);
-} catch (e) {
-  console.error("MODEL DID NOT RETURN VALID JSON:", content);
-  return res.status(500).json({ error: "Model output not valid JSON" });
+    // RETURN
+    return res.status(200).json({ source: "live", category, answer });
+
+  } catch (err) {
+    console.error("ask_ai error:", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
 }
-
-// SAVE CACHE (salviamo il JSON vero)
-await supabase.from("ai_cache").insert({
-  query_hash: q,
-  category,
-  response: structured
-});
-
-// RETURN STRUCTURED DATA
-return res.status(200).json({
-  source: "live",
-  category,
-  ...structured
-});
-
 
