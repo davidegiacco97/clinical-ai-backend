@@ -347,9 +347,13 @@ if (req.method === "OPTIONS") {
       .limit(1)
       .maybeSingle();
 
-    if (cached?.response) {
-      return res.status(200).json({ source: "cache", category, answer: cached.response });
-    }
+   if (cached?.response) {
+  return res.status(200).json({
+    source: "cache",
+    category,
+    ...cached.response
+  });
+}
 
     // RAG: clinical_knowledge_base
     const ragContext = await getRagContext(query, category);
@@ -399,31 +403,32 @@ ${pubmedEvidence}
       return res.status(500).json({ error: "Invalid JSON from OpenAI", raw });
     }
 
-// EXTRACT CONTENT
+// EXTRACT CONTENT STRING
 const content =
-  aiData?.choices?.[0]?.message?.content || "{}";
+  aiData?.choices?.[0]?.message?.content || "";
 
-// Il modello restituisce JSON → lo trasformiamo in oggetto vero
-let parsed;
+// TRY PARSE JSON FROM MODEL
+let structured;
+
 try {
-  parsed = JSON.parse(content);
+  structured = JSON.parse(content);
 } catch (e) {
-  console.error("MODEL JSON ERROR:", e);
-  return res.status(500).json({ error: "Model did not return valid JSON", raw: content });
+  console.error("MODEL DID NOT RETURN VALID JSON:", content);
+  return res.status(500).json({ error: "Model output not valid JSON" });
 }
 
-// SAVE CACHE (salviamo sempre il JSON stringa)
+// SAVE CACHE (salviamo il JSON vero)
 await supabase.from("ai_cache").insert({
   query_hash: q,
   category,
-  response: content
+  response: structured
 });
 
-// RETURN STRUTTURATO
+// RETURN STRUCTURED DATA
 return res.status(200).json({
   source: "live",
   category,
-  concept: query,
-  ...parsed
+  ...structured
 });
+
 
