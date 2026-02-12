@@ -321,7 +321,26 @@ async function fetchPubMedEvidence(query: string): Promise<string> {
     return "";
   }
 }
+function extractJson(text: string): any {
+  if (!text) return null;
 
+  // Rimuove blocchi ```json ... ```
+  text = text.replace(/```json/gi, "").replace(/```/g, "").trim();
+
+  // Trova il primo { e l’ultimo }
+  const start = text.indexOf("{");
+  const end = text.lastIndexOf("}");
+
+  if (start === -1 || end === -1) return null;
+
+  const jsonString = text.slice(start, end + 1);
+
+  try {
+    return JSON.parse(jsonString);
+  } catch {
+    return null;
+  }
+}
 // ─────────────────────────────────────────────
 // MAIN HANDLER
 // ─────────────────────────────────────────────
@@ -492,13 +511,10 @@ ${pubmedEvidence}
       return res.status(500).json({ error: "Invalid JSON from OpenAI", raw });
     }
 
-// PARSE RISPOSTA OPENAI (stringa JSON → oggetto)
-let parsed;
-try {
-  parsed = JSON.parse(
-    aiData?.choices?.[0]?.message?.content || "{}"
-  );
-} catch {
+const rawContent = aiData?.choices?.[0]?.message?.content || "";
+let parsed = extractJson(rawContent);
+
+if (!parsed) {
   parsed = { definition: "Errore generazione risposta" };
 }
 
