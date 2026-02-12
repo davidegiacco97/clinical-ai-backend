@@ -160,7 +160,7 @@ function detectCategory(q: string): string {
 }
 
 // ─────────────────────────────────────────────
-// HELPER: filtro “solo definizioni” (già concordato)
+// HELPER: filtro “solo definizioni”
 // ─────────────────────────────────────────────
 function isForbiddenQuery(q: string): boolean {
   const forbiddenPatterns = [
@@ -203,7 +203,7 @@ async function getEmbedding(text: string): Promise<number[] | null> {
 }
 
 // ─────────────────────────────────────────────
-// HELPER: cosine similarity (per RAG senza RPC)
+// HELPER: cosine similarity
 // ─────────────────────────────────────────────
 function cosineSimilarity(a: number[], b: number[]): number {
   const dot = a.reduce((sum, v, i) => sum + v * b[i], 0);
@@ -214,12 +214,11 @@ function cosineSimilarity(a: number[], b: number[]): number {
 }
 
 // ─────────────────────────────────────────────
-// HELPER: RAG con clinical_knowledge_base + map/fonti
+// HELPER: RAG
 // ─────────────────────────────────────────────
 async function getRagContext(query: string, category: string): Promise<string> {
   const embedding = await getEmbedding(query);
 
-  // 1) Nuovo metodo: embeddings su clinical_knowledge_base
   if (embedding) {
     const { data, error } = await supabase
       .from("clinical_knowledge_base")
@@ -243,7 +242,6 @@ async function getRagContext(query: string, category: string): Promise<string> {
         .slice(0, 8);
 
       if (top.length > 0) {
-        // opzionale: recupero fonti collegate via evidence_map / evidence_sources
         const ids = top.map((t: any) => t.id);
         let sourcesBlock = "";
 
@@ -274,7 +272,6 @@ async function getRagContext(query: string, category: string): Promise<string> {
     }
   }
 
-  // 2) Fallback: vecchio metodo per categoria (senza embeddings)
   const { data: chunks } = await supabase
     .from("clinical_knowledge_base")
     .select("content")
@@ -285,7 +282,7 @@ async function getRagContext(query: string, category: string): Promise<string> {
 }
 
 // ─────────────────────────────────────────────
-// HELPER: PubMed RAG 2.0 (abstract sintetici, SEMPRE)
+// HELPER: PubMed
 // ─────────────────────────────────────────────
 async function fetchPubMedEvidence(query: string): Promise<string> {
   try {
@@ -326,18 +323,18 @@ async function fetchPubMedEvidence(query: string): Promise<string> {
 }
 
 // ─────────────────────────────────────────────
-// MAIN HANDLER (versione Vercel, non Deno serve)
+// MAIN HANDLER
 // ─────────────────────────────────────────────
 export default async function handler(req: VercelRequest, res: VercelResponse) {
- // CORS
-res.setHeader("Access-Control-Allow-Origin", "*");
-res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
-res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  // CORS
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
-// Preflight
-if (req.method === "OPTIONS") {
-  return res.status(200).end();
-}
+  if (req.method === "OPTIONS") {
+    return res.status(200).end();
+  }
+
   try {
     if (req.method !== "POST") {
       return res.status(405).json({ error: "Method not allowed" });
@@ -346,41 +343,76 @@ if (req.method === "OPTIONS") {
     const body = req.body as any;
 
     const userId = body.userId;
-     if (!userId) {
+    const userEmailRaw = body.userEmail;
+
+    if (!userId) {
       return res.status(400).json({ error: "Missing userId" });
     }
 
-    const periodStart = new Date();
-    periodStart.setDate(1);
-    periodStart.setHours(0, 0, 0, 0);
-    const periodStartStr = periodStart.toISOString().slice(0, 10);
+    if (!userEmailRaw) {
+      return res.status(400).json({ error: "Missing userEmail" });
+    }
 
+    const userEmail = String(userEmailRaw).toLowerCase();
+
+    // WHITELIST EMAIL
+    const { data: allowed } = await supabase
+      .from("allowed_emails")
+      .select("email")
+      .eq("email", userEmail)
+      .maybeSingle();
+
+    if (!allowed) {
+      return res.status(403).json({
+        error: "Accesso riservato. La tua email non è autorizzata al beta."
+      });
+    }
+
+    // USAGE / CICLO 30 GIORNI TIPO ABBONAMENTO
     const { data: usageRow } = await supabase
       .from("api_usage")
       .select("*")
       .eq("user_id", userId)
-      .eq("period_start", periodStartStr)
       .maybeSingle();
 
-    if (usageRow && usageRow.count >= 45) {
-      return res.status(429).json({
-        error: "Hai raggiunto il limite mensile di 45 richieste."
-      });
-    }
+    const now = new Date();
 
     if (!usageRow) {
+      // primo ciclo per l'utente
       await supabase.from("api_usage").insert({
         user_id: userId,
-        period_start: periodStartStr,
+        period_start: now.toISOString(),
+        last_reset_at: now.toISOString(),
         count: 1
       });
     } else {
-      await supabase
-        .from("api_usage")
-        .update({ count: usageRow.count + 1 })
-        .eq("id", usageRow.id);
+      const lastReset = new Date(usageRow.last_reset_at || usageRow.period_start);
+      const diffDays = (now.getTime() - lastReset.getTime()) / 86400000;
+
+      if (diffDays > 30) {
+        // nuovo ciclo
+        await supabase
+          .from("api_usage")
+          .update({
+            period_start: now.toISOString(),
+            last_reset_at: now.toISOString(),
+            count: 1
+          })
+          .eq("user_id", userId);
+      } else {
+        if (usageRow.count >= 45) {
+          return res.status(429).json({
+            error: "Hai raggiunto il limite di 45 richieste per il ciclo di 30 giorni."
+          });
+        }
+
+        await supabase
+          .from("api_usage")
+          .update({ count: usageRow.count + 1 })
+          .eq("user_id", userId);
+      }
     }
-    
+
     if (!body?.query) {
       return res.status(400).json({ error: "Missing query" });
     }
@@ -388,7 +420,6 @@ if (req.method === "OPTIONS") {
     const query = String(body.query).trim();
     const q = query.toLowerCase();
 
-    // BLOCCO: solo definizioni cliniche
     if (isForbiddenQuery(q)) {
       return res.status(400).json({
         error:
@@ -397,10 +428,9 @@ if (req.method === "OPTIONS") {
       });
     }
 
-    // CATEGORY DETECTION
     const category = detectCategory(q);
 
-    // CACHE CHECK (30 DAYS)
+    // CACHE 30 GIORNI
     const limitDate = new Date(Date.now() - 30 * 86400000).toISOString();
 
     const { data: cached } = await supabase
@@ -412,21 +442,17 @@ if (req.method === "OPTIONS") {
       .limit(1)
       .maybeSingle();
 
-   if (cached?.response) {
-  return res.status(200).json({
-    source: "cache",
-    category,
-    ...cached.response
-  });
-}
+    if (cached?.response) {
+      return res.status(200).json({
+        source: "cache",
+        category,
+        ...cached.response
+      });
+    }
 
-    // RAG: clinical_knowledge_base
     const ragContext = await getRagContext(query, category);
-
-    // PUBMED RAG 2.0
     const pubmedEvidence = await fetchPubMedEvidence(query);
 
-    // OPENAI CALL
     const openaiRes = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -455,11 +481,9 @@ ${pubmedEvidence}
       })
     });
 
-    // RAW RESPONSE
     const raw = await openaiRes.text();
     console.log("OPENAI RAW RESPONSE:", raw);
 
-    // PARSE JSON
     let aiData;
     try {
       aiData = JSON.parse(raw);
@@ -468,23 +492,18 @@ ${pubmedEvidence}
       return res.status(500).json({ error: "Invalid JSON from OpenAI", raw });
     }
 
-    // EXTRACT ANSWER
     const answer =
       aiData?.choices?.[0]?.message?.content || "Errore generazione risposta";
 
-    // SAVE CACHE
     await supabase.from("ai_cache").insert({
       query_hash: q,
       category,
       response: answer
     });
 
-    // RETURN
     return res.status(200).json({ source: "live", category, answer });
-
   } catch (err) {
     console.error("ask_ai error:", err);
     return res.status(500).json({ error: "Internal server error" });
   }
 }
-
