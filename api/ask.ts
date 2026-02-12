@@ -346,29 +346,7 @@ if (req.method === "OPTIONS") {
     const body = req.body as any;
 
     const userId = body.userId;
-    // --- ACCESSO RISERVATO: controllo email autorizzate ---
-const { data: userRow } = await supabase.auth.admin.getUserById(userId);
-
-if (!userRow?.user?.email) {
-  return res.status(401).json({ error: "Utente non valido" });
-}
-
-const userEmail = userRow.user.email.toLowerCase();
-
-const { data: allowed } = await supabase
-  .from("allowed_emails")
-  .select("email")
-  .eq("email", userEmail)
-  .maybeSingle();
-
-if (!allowed) {
-  return res.status(403).json({
-    error: "Accesso riservato. La tua email non è autorizzata al beta."
-  });
-}
-    //FINE ACCESSO RISERVATO
-    
-    if (!userId) {
+     if (!userId) {
       return res.status(400).json({ error: "Missing userId" });
     }
 
