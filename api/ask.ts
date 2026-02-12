@@ -344,6 +344,43 @@ if (req.method === "OPTIONS") {
     }
 
     const body = req.body as any;
+
+    const userId = body.userId;
+    if (!userId) {
+      return res.status(400).json({ error: "Missing userId" });
+    }
+
+    const periodStart = new Date();
+    periodStart.setDate(1);
+    periodStart.setHours(0, 0, 0, 0);
+    const periodStartStr = periodStart.toISOString().slice(0, 10);
+
+    const { data: usageRow } = await supabase
+      .from("api_usage")
+      .select("*")
+      .eq("user_id", userId)
+      .eq("period_start", periodStartStr)
+      .maybeSingle();
+
+    if (usageRow && usageRow.count >= 45) {
+      return res.status(429).json({
+        error: "Hai raggiunto il limite mensile di 45 richieste."
+      });
+    }
+
+    if (!usageRow) {
+      await supabase.from("api_usage").insert({
+        user_id: userId,
+        period_start: periodStartStr,
+        count: 1
+      });
+    } else {
+      await supabase
+        .from("api_usage")
+        .update({ count: usageRow.count + 1 })
+        .eq("id", usageRow.id);
+    }
+
     if (!body?.query) {
       return res.status(400).json({ error: "Missing query" });
     }
