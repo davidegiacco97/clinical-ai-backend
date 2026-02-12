@@ -321,26 +321,7 @@ async function fetchPubMedEvidence(query: string): Promise<string> {
     return "";
   }
 }
-function extractJson(text: string): any {
-  if (!text) return null;
 
-  // Rimuove blocchi ```json ... ```
-  text = text.replace(/```json/gi, "").replace(/```/g, "").trim();
-
-  // Trova il primo { e l’ultimo }
-  const start = text.indexOf("{");
-  const end = text.lastIndexOf("}");
-
-  if (start === -1 || end === -1) return null;
-
-  const jsonString = text.slice(start, end + 1);
-
-  try {
-    return JSON.parse(jsonString);
-  } catch {
-    return null;
-  }
-}
 // ─────────────────────────────────────────────
 // MAIN HANDLER
 // ─────────────────────────────────────────────
@@ -461,13 +442,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       .limit(1)
       .maybeSingle();
 
-if (cached?.response) {
-  return res.status(200).json({
-    source: "cache",
-    category,
-    answer: cached.response
-  });
-}
+    if (cached?.response) {
+      return res.status(200).json({
+        source: "cache",
+        category,
+        ...cached.response
+      });
+    }
 
     const ragContext = await getRagContext(query, category);
     const pubmedEvidence = await fetchPubMedEvidence(query);
@@ -511,26 +492,16 @@ ${pubmedEvidence}
       return res.status(500).json({ error: "Invalid JSON from OpenAI", raw });
     }
 
-const rawContent = aiData?.choices?.[0]?.message?.content || "";
-let parsed = extractJson(rawContent);
+    const answer =
+      aiData?.choices?.[0]?.message?.content || "Errore generazione risposta";
 
-if (!parsed) {
-  parsed = { definition: "Errore generazione risposta" };
-}
+    await supabase.from("ai_cache").insert({
+      query_hash: q,
+      category,
+      response: answer
+    });
 
-// SALVA IN CACHE COME OGGETTO
-await supabase.from("ai_cache").insert({
-  query_hash: q,
-  category,
-  response: parsed
-});
-
-// RITORNA SEMPRE UN OGGETTO (NON STRINGA)
-return res.status(200).json({
-  source: "live",
-  category,
-  answer: parsed
-});
+    return res.status(200).json({ source: "live", category, answer });
   } catch (err) {
     console.error("ask_ai error:", err);
     return res.status(500).json({ error: "Internal server error" });
