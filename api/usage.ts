@@ -23,24 +23,64 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(400).json({ error: "Missing userId" });
   }
 
-  const periodStart = new Date();
-  periodStart.setDate(1);
-  periodStart.setHours(0, 0, 0, 0);
-  const periodStartStr = periodStart.toISOString().slice(0, 10);
-
   const { data: usageRow } = await supabase
     .from("api_usage")
     .select("*")
     .eq("user_id", userId)
-    .eq("period_start", periodStartStr)
     .maybeSingle();
 
-  const count = usageRow?.count || 0;
   const limit = 45;
+  const now = new Date();
+
+  if (!usageRow) {
+    const cycleEnd = new Date(now.getTime() + 30 * 86400000);
+
+    await supabase.from("api_usage").insert({
+      user_id: userId,
+      period_start: now.toISOString(),
+      last_reset_at: now.toISOString(),
+      count: 0
+    });
+
+    return res.status(200).json({
+      count: 0,
+      limit,
+      remaining: limit,
+      cycle_end: cycleEnd.toISOString()
+    });
+  }
+
+  const lastReset = new Date(usageRow.last_reset_at || usageRow.period_start);
+  const diffDays = (now.getTime() - lastReset.getTime()) / 86400000;
+
+  if (diffDays > 30) {
+    const cycleEnd = new Date(now.getTime() + 30 * 86400000);
+
+    await supabase
+      .from("api_usage")
+      .update({
+        period_start: now.toISOString(),
+        last_reset_at: now.toISOString(),
+        count: 0
+      })
+      .eq("user_id", userId);
+
+    return res.status(200).json({
+      count: 0,
+      limit,
+      remaining: limit,
+      cycle_end: cycleEnd.toISOString()
+    });
+  }
+
+  const cycleEnd = new Date(lastReset.getTime() + 30 * 86400000);
+
+  const count = usageRow.count || 0;
 
   return res.status(200).json({
     count,
     limit,
-    remaining: Math.max(0, limit - count)
+    remaining: Math.max(0, limit - count),
+    cycle_end: cycleEnd.toISOString()
   });
 }
