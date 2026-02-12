@@ -492,14 +492,19 @@ ${pubmedEvidence}
       return res.status(500).json({ error: "Invalid JSON from OpenAI", raw });
     }
 
-    const answer =
-      aiData?.choices?.[0]?.message?.content || "Errore generazione risposta";
+ // SAVE CACHE (fix: salva come oggetto JSON)
+let parsed;
+try {
+  parsed = JSON.parse(answer);
+} catch {
+  parsed = { definition: answer };
+}
 
-    await supabase.from("ai_cache").insert({
-      query_hash: q,
-      category,
-      response: answer
-    });
+await supabase.from("ai_cache").insert({
+  query_hash: q,
+  category,
+  response: parsed
+});
 
     return res.status(200).json({ source: "live", category, answer });
   } catch (err) {
