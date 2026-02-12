@@ -529,7 +529,7 @@ await supabase.from("ai_cache").insert({
 return res.status(200).json({
   source: "live",
   category,
-  ...parsed
+  answer: parsed
 });
   } catch (err) {
     console.error("ask_ai error:", err);
