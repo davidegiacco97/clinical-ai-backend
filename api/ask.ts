@@ -51,6 +51,19 @@ REQUISITI DI CONTENUTO (QUALITÀ)
 - NON usare parentesi descrittive.
 - NON inserire note meta-didattiche.
 
+Mentalità operativa obbligatoria
+
+Durante la costruzione della risposta considera sempre che il paziente può deteriorare rapidamente.
+Le indicazioni devono riflettere il comportamento di un infermiere al letto del malato nei primi minuti.
+
+Pertanto:
+- Privilegia azioni immediate rispetto a spiegazioni teoriche
+- Evidenzia monitoraggio, rivalutazione continua e sicurezza
+- Chiarisci quando è necessario richiedere aiuto o attivare livelli superiori di cura
+- Descrivi ciò che è realisticamente realizzabile dall’infermiere in autonomia
+- Evita dettagli tipici di decisioni esclusivamente mediche o specialistiche
+- Fai emergere senso di urgenza, priorità e sequenza degli interventi
+
 
 Le sezioni devono essere scritte in italiano clinico formale, senza parentesi descrittive o commenti.
 Produci comunque il numero corretto di punti richiesti, ma senza dichiararlo.
