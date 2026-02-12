@@ -380,7 +380,27 @@ if (req.method === "OPTIONS") {
         .update({ count: usageRow.count + 1 })
         .eq("id", usageRow.id);
     }
+// --- ACCESSO RISERVATO: controllo email autorizzate ---
+const { data: userRow } = await supabase.auth.admin.getUserById(userId);
 
+if (!userRow?.user?.email) {
+  return res.status(401).json({ error: "Utente non valido" });
+}
+
+const userEmail = userRow.user.email.toLowerCase();
+
+const { data: allowed } = await supabase
+  .from("allowed_emails")
+  .select("email")
+  .eq("email", userEmail)
+  .maybeSingle();
+
+if (!allowed) {
+  return res.status(403).json({
+    error: "Accesso riservato. La tua email non è autorizzata al beta."
+  });
+}
+  //Fine accesso riservato  
     if (!body?.query) {
       return res.status(400).json({ error: "Missing query" });
     }
