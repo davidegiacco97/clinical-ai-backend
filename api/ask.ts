@@ -492,21 +492,29 @@ ${pubmedEvidence}
       return res.status(500).json({ error: "Invalid JSON from OpenAI", raw });
     }
 
- // SAVE CACHE (fix: salva come oggetto JSON)
+// PARSE RISPOSTA OPENAI (stringa JSON → oggetto)
 let parsed;
 try {
-  parsed = JSON.parse(answer);
+  parsed = JSON.parse(
+    aiData?.choices?.[0]?.message?.content || "{}"
+  );
 } catch {
-  parsed = { definition: answer };
+  parsed = { definition: "Errore generazione risposta" };
 }
 
+// SALVA IN CACHE COME OGGETTO
 await supabase.from("ai_cache").insert({
   query_hash: q,
   category,
   response: parsed
 });
 
-    return res.status(200).json({ source: "live", category, answer });
+// RITORNA SEMPRE UN OGGETTO (NON STRINGA)
+return res.status(200).json({
+  source: "live",
+  category,
+  ...parsed
+});
   } catch (err) {
     console.error("ask_ai error:", err);
     return res.status(500).json({ error: "Internal server error" });
