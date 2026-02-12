@@ -461,13 +461,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       .limit(1)
       .maybeSingle();
 
-    if (cached?.response) {
-      return res.status(200).json({
-        source: "cache",
-        category,
-        ...cached.response
-      });
-    }
+if (cached?.response) {
+  return res.status(200).json({
+    source: "cache",
+    category,
+    answer: cached.response
+  });
+}
 
     const ragContext = await getRagContext(query, category);
     const pubmedEvidence = await fetchPubMedEvidence(query);
