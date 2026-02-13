@@ -442,6 +442,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       .limit(1)
       .maybeSingle();
 
+    // INCREMENTA USO (vale sia per cache che live)
+await supabase
+  .from("api_usage")
+  .update({ count: usageRow.count + 1 })
+  .eq("user_id", userId);
+    
 if (cached?.response) {
   return res.status(200).json({
     source: "cache",
