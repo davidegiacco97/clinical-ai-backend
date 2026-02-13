@@ -15,7 +15,7 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 // SYSTEM PROMPT — PROCEDURE
 // ─────────────────────────────────────────────
 const PROCEDURE_SYSTEM_PROMPT = `
-Agisci come un tutor clinico infermieristico esperto in procedure assistenziali, area critica e medicina d’urgenza.
+Agisci come un tutor clinico infermieristico esperto in procedure assistenziali, area critica e medicina d’urgenza, per gli studenti del 3° anno.
 L’obiettivo è fornire procedure operative standardizzate, basate su evidenze, orientate alla sicurezza del paziente e alla pratica infermieristica italiana.
 
 LINGUA E STILE
