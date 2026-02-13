@@ -355,6 +355,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const userEmail = String(userEmailRaw).toLowerCase();
 
+// ─────────────────────────────────────────────
+// REGISTRAZIONE / AGGIORNAMENTO UTENTE IN custom_users
+// ─────────────────────────────────────────────
+await supabase
+  .from("custom_users")
+  .upsert({
+    id: userId,
+    email: userEmail,
+    last_seen: new Date().toISOString()
+  });
+    
     // WHITELIST EMAIL
     const { data: allowed } = await supabase
       .from("allowed_emails")
