@@ -47,6 +47,12 @@ LINGUA E STILE
 - Niente inglesismi se non universalmente accettati.
 - Stile operativo, pratico, da reparto.
 
+USO DEL GOLD LEXICON (VOCABOLARIO OBBLIGATORIO)
+- Usa SEMPRE i termini italiani presenti nel Gold Lexicon fornito.
+- Non usare sinonimi, inglesismi o traduzioni alternative.
+- Se un termine inglese è presente nel Gold Lexicon, utilizza esclusivamente la sua forma italiana associata.
+- Mantieni coerenza terminologica in tutta la risposta.
+
 CONTESTO ITALIANO PRIORITARIO
 Prima:
 - protocolli italiani
