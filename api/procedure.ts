@@ -356,19 +356,33 @@ ${pubmedEvidence}
       })
     });
 
-    const raw = await openaiRes.text();
-    console.log("OPENAI RAW PROCEDURE:", raw);
+const raw = await openaiRes.text();
+console.log("OPENAI RAW PROCEDURE:", raw);
 
-    let aiData;
-    try {
-      aiData = JSON.parse(raw);
-    } catch (e) {
-      console.error("JSON PARSE ERROR:", e);
-      return res.status(500).json({ error: "Invalid JSON from OpenAI", raw });
-    }
+let aiData;
+try {
+  aiData = JSON.parse(raw);
+} catch (e) {
+  console.error("JSON PARSE ERROR:", e);
+  return res.status(500).json({ error: "Invalid JSON from OpenAI", raw });
+}
 
-    const answer =
-      aiData?.choices?.[0]?.message?.content || "Errore generazione risposta";
+let answer = aiData?.choices?.[0]?.message?.content || "";
+
+// Ora dobbiamo verificare che answer sia un JSON valido
+let parsed;
+try {
+  parsed = JSON.parse(answer);
+} catch (e) {
+  console.error("PROCEDURE JSON INVALIDO:", answer);
+  return res.status(500).json({
+    error: "Invalid procedure JSON from OpenAI",
+    raw: answer
+  });
+}
+
+// Se parsed è valido, lo salviamo e lo restituiamo
+answer = JSON.stringify(parsed);
 
     await supabase.from("procedures_cache").insert({
       query_hash: q,
