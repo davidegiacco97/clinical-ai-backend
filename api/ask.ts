@@ -33,6 +33,12 @@ LINGUA E STILE
   preciso e didatticamente avanzato.
 - Mantieni stile operativo, concreto, applicabile al letto del paziente.
 
+USO DEL GOLD LEXICON (VOCABOLARIO OBBLIGATORIO)
+- Usa SEMPRE i termini italiani presenti nel Gold Lexicon fornito.
+- Non usare sinonimi, inglesismi o traduzioni alternative.
+- Se un termine inglese è presente nel Gold Lexicon, utilizza esclusivamente la sua forma italiana associata.
+- Mantieni coerenza terminologica in tutta la risposta.
+
 REQUISITI DI CONTENUTO (QUALITÀ)
 - La definizione deve essere chiara e clinicamente corretta.
 - La fisiopatologia deve essere completa, coerente e clinicamente orientata.
