@@ -361,6 +361,36 @@ await supabase
     // PUBMED
     const pubmedEvidence = await fetchPubMedEvidence(query);
 
+// ─────────────────────────────────────────────
+// RAG TERMINOLOGICO — GOLD LEXICON
+// ─────────────────────────────────────────────
+async function getLexiconTerms(category: string) {
+  const { data, error } = await supabase
+    .from("gold_lexicon")
+    .select("english, italian, embedding");
+
+  if (error || !data) return [];
+
+  const queryEmbedding = await getEmbedding(category);
+  if (!queryEmbedding) return [];
+
+  const scored = data.map((row) => ({
+    ...row,
+    score: cosineSimilarity(queryEmbedding, row.embedding || []),
+  }));
+
+  return scored
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 20)
+    .map((t) => `- "${t.english}" → "${t.italian}"`);
+}
+
+const lexiconTerms = await getLexiconTerms(category);
+
+const lexiconBlock = lexiconTerms.length
+  ? "\n\nVOCABOLARIO OBBLIGATORIO (GOLD LEXICON):\n" + lexiconTerms.join("\n")
+  : "";
+    
     // OPENAI
     const openaiRes = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
