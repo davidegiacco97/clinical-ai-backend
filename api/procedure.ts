@@ -332,6 +332,23 @@ await supabase
         error: "Accesso riservato. La tua email non è autorizzata al beta."
       });
     }
+  
+
+ if (!body?.query) {
+      return res.status(400).json({ error: "Missing query" });
+    }
+
+    const query = String(body.query).trim();
+    const q = query.toLowerCase();
+
+    if (isForbiddenProcedureQuery(q)) {
+      return res.status(400).json({
+        error:
+          "Questa modalità fornisce solo procedure cliniche strutturate. " +
+          "Per domande, confronti o decision-making utilizza la modalità avanzata."
+      });
+    }
+    const category = body.category || "general";
 
     // USAGE
     const { data: usageRow } = await supabase
@@ -375,22 +392,6 @@ await supabase
           .eq("user_id", userId);
       }
     }
-
- if (!body?.query) {
-      return res.status(400).json({ error: "Missing query" });
-    }
-
-    const query = String(body.query).trim();
-    const q = query.toLowerCase();
-
-    if (isForbiddenProcedureQuery(q)) {
-      return res.status(400).json({
-        error:
-          "Questa modalità fornisce solo procedure cliniche strutturate. " +
-          "Per domande, confronti o decision-making utilizza la modalità avanzata."
-      });
-    }
-    const category = body.category || "general";
 
     // CACHE
     const limitDate = new Date(Date.now() - 30 * 86400000).toISOString();
