@@ -383,7 +383,7 @@ await supabase
     const query = String(body.query).trim();
     const q = query.toLowerCase();
 
-    if (isForbiddenQuery(q)) {
+    if (isForbiddenProcedureQuery(q)) {
       return res.status(400).json({
         error:
           "Questa modalità fornisce solo procedure cliniche strutturate. " +
