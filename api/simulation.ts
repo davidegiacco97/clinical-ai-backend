@@ -106,7 +106,7 @@ async function addXP(userId: string, xp: number) {
 
   const { data } = await supabase
     .from("simulation_profiles")
-    .select("xp")
+    .select("xp, level")
     .eq("user_id", userId)
     .maybeSingle();
 
@@ -126,6 +126,189 @@ async function addXP(userId: string, xp: number) {
     .from("simulation_profiles")
     .update({ xp: newXP, level: newLevel })
     .eq("user_id", userId);
+}
+
+async function getSimulationProfile(userId: string) {
+  const { data } = await supabase
+    .from("simulation_profiles")
+    .select("xp, level")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  return {
+    xpTotal: data?.xp || 0,
+    level: data?.level || 1
+  };
+}
+
+// ─────────────────────────────────────────────
+// RISK LEVEL INFERENCE
+// ─────────────────────────────────────────────
+function inferRiskLevel(vitals: any): "low" | "medium" | "high" {
+  if (!vitals) return "medium";
+
+  const hr = Number(vitals.hr || 0);
+  const rr = Number(vitals.rr || 0);
+  const spo2 = Number(vitals.spo2 || 0);
+  const temp = Number(vitals.temp || 0);
+  const bpStr = String(vitals.bp || "");
+  const systolic = parseInt(bpStr.split("/")[0] || "0", 10);
+
+  if (
+    spo2 < 90 ||
+    systolic < 90 ||
+    hr > 130 ||
+    rr > 30 ||
+    temp > 39.5 ||
+    temp < 35
+  ) {
+    return "high";
+  }
+
+  if (
+    spo2 < 94 ||
+    systolic < 100 ||
+    hr > 110 ||
+    rr > 24 ||
+    temp > 38.5
+  ) {
+    return "medium";
+  }
+
+  return "low";
+}
+
+// ─────────────────────────────────────────────
+// DEBRIEF BUILDER (BACKEND-DRIVEN)
+// ─────────────────────────────────────────────
+async function buildDebrief(
+  userId: string,
+  simData: any,
+  history: string[] | undefined
+) {
+  const profile = await getSimulationProfile(userId);
+
+  const outcome = simData.outcome || "ongoing";
+  const lastUpdate = simData.patientUpdate || "";
+  const findings: string[] = Array.isArray(simData.newFindings)
+    ? simData.newFindings
+    : [];
+
+  const historyText = (history || []).join(" | ");
+
+  let summary = "";
+  let strengths: string[] = [];
+  let priorityErrors: string[] = [];
+  let missedRisks: string[] = [];
+  let clinicalReasoning: string[] = [];
+  let whatWouldHappenNext = "";
+
+  if (outcome === "improved") {
+    summary = `Il paziente ha mostrato un miglioramento clinico significativo. ${lastUpdate}`;
+    strengths = [
+      "Hai riconosciuto precocemente i segni di instabilità.",
+      "Hai scelto interventi coerenti con le priorità cliniche.",
+      "Hai monitorato in modo sistematico i parametri vitali.",
+      "Hai rivalutato l'efficacia degli interventi nel tempo."
+    ];
+    priorityErrors = [];
+    missedRisks = findings.length
+      ? [
+          "Alcuni reperti aggiuntivi non sono stati pienamente integrati nel ragionamento clinico.",
+          "Alcuni rischi potenziali sono stati riconosciuti ma non gestiti in modo esplicito."
+        ]
+      : [];
+    clinicalReasoning = [
+      "Hai dimostrato una buona capacità di collegare segni e sintomi alle priorità assistenziali.",
+      "La sequenza delle azioni è stata in gran parte coerente con la gravità del quadro clinico.",
+      "Hai mostrato attenzione alla stabilizzazione respiratoria e circolatoria."
+    ];
+    whatWouldHappenNext =
+      "Con il proseguire del monitoraggio e degli interventi, il paziente potrebbe consolidare il miglioramento e avviarsi verso una stabilizzazione completa, con progressiva riduzione dell'intensità assistenziale.";
+  } else if (outcome === "critical") {
+    summary = `Il quadro clinico è evoluto verso una condizione critica. ${lastUpdate}`;
+    strengths = [
+      "Hai mantenuto un monitoraggio costante dei parametri vitali.",
+      "Hai tentato di intervenire su alcuni aspetti prioritari del quadro clinico."
+    ];
+    priorityErrors = [
+      "Alcune priorità critiche non sono state affrontate con sufficiente tempestività.",
+      "La sequenza degli interventi non ha sempre rispecchiato la gravità dei segni vitali.",
+      "Non tutte le modifiche dei parametri vitali sono state tradotte in azioni concrete."
+    ];
+    missedRisks = findings.length
+      ? [
+          "Alcuni reperti aggiuntivi indicavano un rischio imminente che non è stato pienamente riconosciuto.",
+          "Il deterioramento progressivo non è stato intercettato con un cambio di strategia assistenziale."
+        ]
+      : [
+          "Il rischio di deterioramento rapido non è stato anticipato in modo adeguato.",
+          "La possibilità di complicanze non è stata integrata nel piano assistenziale."
+        ];
+    clinicalReasoning = [
+      "Il ragionamento clinico è stato presente ma non sempre allineato alla gravità del quadro.",
+      "Alcuni segni di allarme non sono stati interpretati come prioritari.",
+      "La gestione delle risorse e del tempo potrebbe essere ottimizzata nelle fasi critiche."
+    ];
+    whatWouldHappenNext =
+      "In uno scenario reale, il paziente richiederebbe un'escalation assistenziale rapida, con coinvolgimento del team medico, possibile trasferimento in area ad alta intensità di cura e attivazione di protocolli di emergenza.";
+  } else if (outcome === "stabilized") {
+    summary = `Il paziente ha raggiunto una stabilizzazione relativa, pur mantenendo alcuni elementi di fragilità clinica. ${lastUpdate}`;
+    strengths = [
+      "Hai ottenuto una stabilizzazione dei parametri vitali più critici.",
+      "Hai mantenuto un monitoraggio regolare e strutturato.",
+      "Hai dimostrato capacità di rivalutazione nel tempo."
+    ];
+    priorityErrors = [
+      "Alcune aree di rischio residuo non sono state affrontate in modo completo.",
+      "La pianificazione a medio termine potrebbe essere ulteriormente strutturata."
+    ];
+    missedRisks = findings.length
+      ? [
+          "Alcuni reperti suggeriscono rischi evolutivi che richiederebbero un follow-up più stretto.",
+          "Non tutti i potenziali punti di deterioramento sono stati esplicitamente considerati."
+        ]
+      : [];
+    clinicalReasoning = [
+      "Il ragionamento clinico ha permesso di evitare un deterioramento, ma può essere reso più proattivo.",
+      "La gestione delle priorità è stata generalmente adeguata, con margini di miglioramento nella previsione dei rischi.",
+      "Hai mostrato attenzione alla continuità assistenziale."
+    ];
+    whatWouldHappenNext =
+      "Con una pianificazione assistenziale strutturata e un monitoraggio continuo, il paziente potrebbe mantenere la stabilità e progredire verso un miglioramento, riducendo gradualmente il livello di intensità assistenziale.";
+  } else {
+    // fallback, non dovrebbe arrivare qui per il debrief
+    summary = `La simulazione si è conclusa con un esito non specificato. ${lastUpdate}`;
+    strengths = [
+      "Hai portato a termine la simulazione mantenendo un monitoraggio costante.",
+      "Hai esplorato diverse opzioni decisionali nel corso dello scenario."
+    ];
+    priorityErrors = [];
+    missedRisks = [];
+    clinicalReasoning = [
+      "Il ragionamento clinico può essere ulteriormente strutturato per migliorare la gestione delle priorità.",
+    ];
+    whatWouldHappenNext =
+      "In uno scenario reale, sarebbe necessario un debriefing strutturato per consolidare gli apprendimenti e identificare le aree di miglioramento.";
+  }
+
+  // Se abbiamo una storia, usiamola per arricchire il reasoning
+  if (history && history.length > 0) {
+    clinicalReasoning.push(
+      `La sequenza delle azioni (${historyText}) mostra il tuo stile decisionale: puoi usarla per riflettere su tempi, priorità e alternative possibili.`
+    );
+  }
+
+  return {
+    summary,
+    strengths,
+    priorityErrors,
+    missedRisks,
+    clinicalReasoning,
+    whatWouldHappenNext,
+    xpTotal: profile.xpTotal,
+    level: profile.level
+  };
 }
 
 // ─────────────────────────────────────────────
@@ -157,20 +340,20 @@ Genera fase iniziale.
 Materiale di riferimento:
 ${ragContext}
 `;
-    }
-
-    if (action === "step") {
+    } else if (action === "step") {
       userMessage = `
 Simulazione in corso.
 
 STORIA PRECEDENTE:
-${JSON.stringify(history)}
+${JSON.stringify(history || [])}
 
 AZIONE SCELTA DALLO STUDENTE:
 ${choice}
 
 Evolvi la situazione.
 `;
+    } else {
+      return res.status(400).json({ error: "Invalid action" });
     }
 
     // ─────────────────────────────────────────────
@@ -194,7 +377,7 @@ Evolvi la situazione.
 
     const raw = await openaiRes.text();
 
-    let parsed;
+    let parsed: any;
     try {
       parsed = JSON.parse(raw);
     } catch {
@@ -212,7 +395,7 @@ Evolvi la situazione.
       .replace(/```json/g, "")
       .replace(/```/g, "");
 
-    let simData;
+    let simData: any;
     try {
       simData = JSON.parse(cleaned);
     } catch {
@@ -222,10 +405,59 @@ Evolvi la situazione.
       });
     }
 
-    // XP UPDATE
-    await addXP(userId, simData.xpDelta || 0);
+    // Assicuriamoci che vitals esista
+    if (!simData.vitals) {
+      simData.vitals = {
+        hr: 90,
+        bp: "120/70",
+        rr: 16,
+        spo2: 98,
+        temp: 36.8,
+        consciousness: "vigile"
+      };
+    }
 
-    return res.status(200).json(simData);
+    // Assicuriamoci che newFindings e availableActions siano array
+    if (!Array.isArray(simData.newFindings)) {
+      simData.newFindings = [];
+    }
+    if (!Array.isArray(simData.availableActions)) {
+      simData.availableActions = [
+        { id: "A", label: "Valuta nuovamente il paziente" },
+        { id: "B", label: "Richiedi supporto al team" },
+        { id: "C", label: "Rivaluta i parametri vitali" },
+        { id: "D", label: "Documenta la situazione" }
+      ];
+    }
+
+    // Risk level fallback
+    if (!simData.riskLevel) {
+      simData.riskLevel = inferRiskLevel(simData.vitals);
+    }
+
+    const xpDelta = Number(simData.xpDelta || 0);
+
+    // Se outcome è ongoing → step normale
+    if (!simData.outcome || simData.outcome === "ongoing") {
+      await addXP(userId, xpDelta);
+      return res.status(200).json({
+        phase: simData.phase || "Fase iniziale",
+        environment: simData.environment || "Reparto",
+        patientUpdate: simData.patientUpdate || "",
+        vitals: simData.vitals,
+        newFindings: simData.newFindings,
+        availableActions: simData.availableActions,
+        outcome: "ongoing",
+        xpDelta,
+        riskLevel: simData.riskLevel
+      });
+    }
+
+    // Se outcome è finale → generiamo debrief
+    await addXP(userId, xpDelta);
+    const debrief = await buildDebrief(userId, simData, history || []);
+
+    return res.status(200).json(debrief);
 
   } catch (err) {
     console.error("Simulation error:", err);
