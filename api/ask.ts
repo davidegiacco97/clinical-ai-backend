@@ -394,7 +394,22 @@ await supabase
 
     const now = new Date();
 
-    if (!usageRow) {
+    if (!body?.query) {
+      return res.status(400).json({ error: "Missing query" });
+    }
+
+    const query = String(body.query).trim();
+    const q = query.toLowerCase();
+
+    if (isForbiddenQuery(q)) {
+      return res.status(400).json({
+        error:
+          "Questa modalità fornisce solo definizioni cliniche strutturate. " +
+          "Per domande, confronti o decision-making utilizza la modalità avanzata."
+      });
+    }
+
+        if (!usageRow) {
       // primo ciclo per l'utente
       await supabase.from("api_usage").insert({
         user_id: userId,
@@ -430,20 +445,6 @@ await supabase
       }
     }
 
-    if (!body?.query) {
-      return res.status(400).json({ error: "Missing query" });
-    }
-
-    const query = String(body.query).trim();
-    const q = query.toLowerCase();
-
-    if (isForbiddenQuery(q)) {
-      return res.status(400).json({
-        error:
-          "Questa modalità fornisce solo definizioni cliniche strutturate. " +
-          "Per domande, confronti o decision-making utilizza la modalità avanzata."
-      });
-    }
 
     const category = detectCategory(q);
 
