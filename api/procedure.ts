@@ -376,12 +376,20 @@ await supabase
       }
     }
 
-    if (!body?.query) {
-      return res.status(400).json({ error: "Missing query" });
-    }
+if (!body?.query) {
+  return res.status(400).json({ error: "Missing query" });
+}
 
-    const query = String(body.query).trim();
-    const q = query.toLowerCase();
+const query = String(body.query).trim();
+const q = query.toLowerCase();
+
+if (isForbiddenQuery(q)) {
+  return res.status(400).json({
+    error:
+      "Questa modalità fornisce solo procedure infermieristiche strutturate. " +
+      "Per domande, confronti o decision-making utilizza la modalità avanzata."
+  });
+}
 
     const category = body.category || "general";
 
