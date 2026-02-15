@@ -173,6 +173,9 @@ Evolvi la situazione.
 `;
     }
 
+    // ─────────────────────────────────────────────
+    // OPENAI CALL
+    // ─────────────────────────────────────────────
     const openaiRes = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -195,19 +198,37 @@ Evolvi la situazione.
     try {
       parsed = JSON.parse(raw);
     } catch {
-      return res.status(500).json({ error: "Invalid JSON", raw });
+      return res.status(500).json({ error: "Invalid JSON from OpenAI", raw });
     }
 
     const content = parsed?.choices?.[0]?.message?.content;
-    if (!content) return res.status(500).json({ error: "No content" });
+    if (!content) return res.status(500).json({ error: "No content", raw });
 
-    const simData = JSON.parse(content);
+    // ─────────────────────────────────────────────
+    // SANITIZER JSON
+    // ─────────────────────────────────────────────
+    const cleaned = content
+      .trim()
+      .replace(/```json/g, "")
+      .replace(/```/g, "");
 
+    let simData;
+    try {
+      simData = JSON.parse(cleaned);
+    } catch {
+      return res.status(500).json({
+        error: "Invalid simulation JSON",
+        rawContent: cleaned
+      });
+    }
+
+    // XP UPDATE
     await addXP(userId, simData.xpDelta || 0);
 
     return res.status(200).json(simData);
+
   } catch (err) {
-    console.error(err);
+    console.error("Simulation error:", err);
     return res.status(500).json({ error: "Simulation error" });
   }
 }
