@@ -110,6 +110,50 @@ Le differenze estere vanno messe SOLO nella chiave internationalDifferences.
 `.trim();
 
 // ─────────────────────────────────────────────
+// HELPER: filtro richieste NON procedurali
+// ─────────────────────────────────────────────
+function isForbiddenProcedureQuery(q: string): boolean {
+  const forbiddenPatterns = [
+    // Domande teoriche / spiegazioni
+    "cos'è", "cos e", "cos è", "cosa è", "cosa significa",
+    "spiegami", "perché", "perche", "perchè",
+    "per quale motivo", "come funziona",
+
+    // Diagnosi / clinica
+    "diagnosi", "diagnosticare", "diagnostica",
+    "sintomi", "segni", "terapia",
+    "prognosi", "decorso",
+
+    // Decision making
+    "cosa devo", "cosa faccio", "cosa fare",
+    "se il paziente", "se il pz",
+    "se peggiora", "se migliora",
+    "cosa succede se",
+
+    // Confronti
+    "meglio", "peggio", "preferibile",
+    "differenza", "differenze",
+    "confronto", "vs", "versus",
+
+    // Farmaci
+    "farmaco", "farmaci", "dose", "dosaggio", "posologia",
+
+    // Protocolli medici
+    "protocollo medico", "linee guida", "algoritmo",
+
+    // Richieste non procedurali
+    "cos'è un", "cos'è una",
+    "che cos'è", "che cosa è",
+    "definizione", "spiegazione",
+
+    // Richieste generiche
+    "qual è", "quale ", "qual e",
+  ];
+
+  return forbiddenPatterns.some(p => q.toLowerCase().includes(p));
+}
+
+// ─────────────────────────────────────────────
 // EMBEDDING
 // ─────────────────────────────────────────────
 async function getEmbedding(text: string): Promise<number[] | null> {
