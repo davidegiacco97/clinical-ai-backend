@@ -260,15 +260,16 @@ const PERSONALITIES = [
   "spaventato"
 ];
 
-// ─────────────────────────────────────────────
-// UTIL
-// ─────────────────────────────────────────────
+
+/* ================================
+   UTIL
+================================ */
 
 function randomFrom<T>(arr: T[]): T {
   return arr[Math.floor(Math.random() * arr.length)];
 }
 
-function generateCoherentAge(env: EnvironmentConfig) {
+function generateCoherentAge(env: any) {
   return Math.floor(
     Math.random() * (env.maxAge - env.minAge + 1)
   ) + env.minAge;
@@ -285,15 +286,15 @@ function isPregnancyPossible(age: number, gender: string) {
 
 function initialSeverity(pathology: string): number {
   if (
-    pathology.includes("Shock") ||
-    pathology.includes("ARDS") ||
-    pathology.includes("Emorragia")
+    pathology.toLowerCase().includes("shock") ||
+    pathology.toLowerCase().includes("ards") ||
+    pathology.toLowerCase().includes("emorragia")
   ) return 4;
 
   if (
-    pathology.includes("Infarto") ||
-    pathology.includes("Sepsi") ||
-    pathology.includes("Ictus")
+    pathology.toLowerCase().includes("infarto") ||
+    pathology.toLowerCase().includes("sepsi") ||
+    pathology.toLowerCase().includes("ictus")
   ) return 3;
 
   return 2;
@@ -312,20 +313,87 @@ function vitalsBySeverity(severity: number) {
   return { hr: 140, bp: "80/45", rr: 32, spo2: 85, temp: 39.5, consciousness: "soporoso" };
 }
 
-// ─────────────────────────────────────────────
-// SYSTEM PROMPT AAA + SBAR
-// ─────────────────────────────────────────────
+/* ================================
+   PROFILO ADATTIVO STUDENTE
+================================ */
+
+async function getOrCreateAdaptiveProfile(userId: string) {
+  const { data } = await supabase
+    .from("simulation_profiles")
+    .select("*")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (!data) {
+    const { data: created } = await supabase
+      .from("simulation_profiles")
+      .insert({
+        user_id: userId,
+        xp: 0,
+        level: 1,
+        behavior: {
+          escalationDelay: 0,
+          airwayFocus: 0,
+          hemodynamicNeglect: 0,
+          renalNeglect: 0,
+          impulsivity: 0
+        }
+      })
+      .select()
+      .single();
+    return created;
+  }
+
+  return data;
+}
+
+function updateBehaviorMetrics(profile: any, choice: string | undefined) {
+  if (!choice) return profile.behavior;
+
+  const behavior = profile.behavior || {};
+
+  if (choice.toLowerCase().includes("ossigen"))
+    behavior.airwayFocus = (behavior.airwayFocus || 0) + 1;
+
+  if (choice.toLowerCase().includes("pressione") || choice.toLowerCase().includes("fluid"))
+    behavior.hemodynamicNeglect = Math.max((behavior.hemodynamicNeglect || 0) - 1, 0);
+
+  if (choice.toLowerCase().includes("diures"))
+    behavior.renalNeglect = Math.max((behavior.renalNeglect || 0) - 1, 0);
+
+  if (choice.toLowerCase().includes("attendi"))
+    behavior.escalationDelay = (behavior.escalationDelay || 0) + 1;
+
+  return behavior;
+}
+
+function adaptiveDifficulty(profile: any, baseSeverity: number) {
+  const behavior = profile.behavior || {};
+  let modifier = 0;
+
+  if ((behavior.escalationDelay || 0) > 3) modifier += 1;
+  if ((behavior.renalNeglect || 0) > 3) modifier += 1;
+  if ((behavior.airwayFocus || 0) > 4) modifier += 1;
+
+  return Math.min(baseSeverity + modifier, 5);
+}
+
+/* ================================
+   SYSTEM PROMPT ADATTIVO
+================================ */
 
 const SYSTEM_PROMPT = `
-Sei il motore narrativo di una simulazione clinica infermieristica realistica.
+Sei il motore narrativo di una simulazione clinica infermieristica ad alta pressione.
 
 REGOLE FERREE:
 - Non cambiare paziente.
 - Non cambiare reparto.
 - Minimo 5 turni.
-- Se gravità alta può arrivare a 7.
-- Pressione progressiva.
-- Nessuna spiegazione didattica.
+- Se gravità alta puoi arrivare a 7.
+- Introduci pressione progressiva.
+- Introduci effetti ritardati.
+- Analizza lo stile decisionale implicito.
+- Adatta la difficoltà.
 
 PRIMO TURNO OBBLIGATORIO:
 Devi generare briefing SBAR completo.
@@ -350,13 +418,15 @@ Dispositivi presenti
 R – Raccomandazione
 Cosa monitorare ora.
 
+
 VIETATO ASSOLUTO:
 - NANDA
 - NIC
 - NOC
+- Spiegazioni didattiche
 - Linguaggio scolastico
 
-Solo JSON.
+Solo JSON valido.
 
 {
   "phase": "string",
@@ -372,9 +442,9 @@ Solo JSON.
 }
 `.trim();
 
-// ─────────────────────────────────────────────
-// CREATE GAME COERENTE
-// ─────────────────────────────────────────────
+/* ================================
+   CREATE GAME
+================================ */
 
 async function createGame(userId: string) {
   const environmentName = randomFrom(Object.keys(ENVIRONMENTS));
@@ -384,7 +454,6 @@ async function createGame(userId: string) {
   const age = generateCoherentAge(env);
   const gender = generateGender(age);
   const pregnant = isPregnancyPossible(age, gender);
-
   const severity = initialSeverity(pathology);
 
   const { data: game } = await supabase
@@ -414,9 +483,9 @@ async function createGame(userId: string) {
   return game;
 }
 
-// ─────────────────────────────────────────────
-// HANDLER
-// ─────────────────────────────────────────────
+/* ================================
+   HANDLER
+================================ */
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "POST")
@@ -424,6 +493,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     const { action, userId, gameId, choice } = req.body;
+
+    const profile = await getOrCreateAdaptiveProfile(userId);
 
     let game;
 
@@ -451,21 +522,28 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       .update({ turn })
       .eq("id", game.id);
 
+    const updatedBehavior = updateBehaviorMetrics(profile, choice);
+
+    await supabase
+      .from("simulation_profiles")
+      .update({ behavior: updatedBehavior })
+      .eq("user_id", userId);
+
+    const adaptiveSeverity = adaptiveDifficulty(profile, game.context.severity);
+
     const userMessage = `
 Reparto: ${game.environment}
 Età: ${game.patient_age}
 Genere: ${game.patient_gender}
 Gravidanza: ${game.context?.pregnant ? "SI" : "NO"}
 Patologia: ${game.context?.pathology}
-Gravità: ${game.context?.severity}
+Gravità adattiva: ${adaptiveSeverity}
+Personalità paziente: ${game.context?.personality}
 Turno: ${turn}
-
-Parametri:
-${JSON.stringify(state.vitals)}
-
 Scelta precedente: ${choice || "Nessuna"}
+Parametri attuali: ${JSON.stringify(state.vitals)}
 
-Evolvi la situazione.
+Adatta pressione e complessità allo stile decisionale implicito.
 `;
 
     const openaiRes = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -476,7 +554,7 @@ Evolvi la situazione.
       },
       body: JSON.stringify({
         model: "gpt-5-nano",
-        temperature: 1.1,
+        temperature: 1.2,
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
           { role: "user", content: userMessage }
@@ -490,13 +568,18 @@ Evolvi la situazione.
     const simData = JSON.parse(content);
 
     const minTurns = 5;
+    const maxTurns = adaptiveSeverity >= 4 ? 7 : 6;
+
     if (turn < minTurns) simData.outcome = "ongoing";
+    if (turn < maxTurns && simData.outcome !== "improved" && simData.outcome !== "critical")
+      simData.outcome = "ongoing";
 
     return res.status(200).json({
       type: simData.outcome === "ongoing" ? "step" : "debrief",
       gameId: game.id,
       environment: game.environment,
       turn,
+      adaptiveSeverity,
       ...simData
     });
 
