@@ -69,7 +69,7 @@ const ENVIRONMENTS: Record<string, EnvironmentConfig> = {
       "Shock cardiogeno",
       "Insufficienza respiratoria acuta",
       "Post CABG",
-      "Post SVA"
+      "Post SVA",
     "Post SVM",
     "Post SVT",
     "Rottura di cuore",
@@ -249,6 +249,7 @@ const ENVIRONMENTS: Record<string, EnvironmentConfig> = {
     "Insufficienza respiratoria acuta",
       "crisi epilettica"
   ]
+  }
 };
 
 const PERSONALITIES = [
