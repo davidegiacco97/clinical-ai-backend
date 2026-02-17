@@ -609,7 +609,7 @@ Adatta pressione e complessità allo stile decisionale implicito.
       },
       body: JSON.stringify({
         model: "gpt-5-nano",
-        temperature: 1.2,
+        temperature: 1,
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
           { role: "user", content: userMessage }
