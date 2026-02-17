@@ -30,17 +30,17 @@ const ENVIRONMENTS: Record<string, EnvironmentConfig> = {
       "Ictus ischemico",
       "Chetoacidosi diabetica",
       "Addome acuto",
-      "Crisi epilettica",       
-    "Sepsi origine ignota",
-    "Polmonite grave",
-    "Trauma toracico",
-    "Emorragia digestiva",
-    "Intossicazione farmacologica",
-    "Ritenzione urinaria acuta",
+      "Crisi epilettica",
+      "Sepsi origine ignota",
+      "Polmonite grave",
+      "Trauma toracico",
+      "Emorragia digestiva",
+      "Intossicazione farmacologica",
+      "Ritenzione urinaria acuta",
       "Riacutizzazione BPCO",
       "Dispnea",
       "Emorragia"
-      ]
+    ]
   },
 
   "Terapia Intensiva Generale": {
@@ -52,11 +52,11 @@ const ENVIRONMENTS: Record<string, EnvironmentConfig> = {
       "Insufficienza multiorgano",
       "Post operatorio complicato",
       "Emorragia massiva",
-    "Insufficienza respiratoria acuta",
-    "Sepsi addominale",
-    "Politrauma",
-    "Pancreatite necrotica",
-    "Insufficienza epatica acuta",
+      "Insufficienza respiratoria acuta",
+      "Sepsi addominale",
+      "Politrauma",
+      "Pancreatite necrotica",
+      "Insufficienza epatica acuta",
       "Insufficienza renale acuta"
     ]
   },
@@ -70,13 +70,13 @@ const ENVIRONMENTS: Record<string, EnvironmentConfig> = {
       "Insufficienza respiratoria acuta",
       "Post CABG",
       "Post SVA",
-    "Post SVM",
-    "Post SVT",
-    "Rottura di cuore",
-    "Deiscenza ferita",
-    "Dissezione aortica tipo A"
+      "Post SVM",
+      "Post SVT",
+      "Rottura di cuore",
+      "Deiscenza ferita",
+      "Dissezione aortica tipo A"
     ]
-  },  
+  },
 
   "Terapia Intensiva Neonatale": {
     minAge: 0,
@@ -85,7 +85,7 @@ const ENVIRONMENTS: Record<string, EnvironmentConfig> = {
       "Prematurità con distress respiratorio",
       "Sepsi neonatale",
       "Sindrome da aspirazione di meconio",
-    "Ittero patologico"
+      "Ittero patologico"
     ]
   },
 
@@ -98,57 +98,57 @@ const ENVIRONMENTS: Record<string, EnvironmentConfig> = {
       "Disidratazione severa",
       "Polmonite ab ingestis",
       "Ulcera da pressione infetta",
-    "Malnutrizione",
-    "Scompenso cardiaco",
-    "Declino cognitivo acuto",
+      "Malnutrizione",
+      "Scompenso cardiaco",
+      "Declino cognitivo acuto",
       "Riacutizzazione BPCO",
       "Insufficienza renale acuta",
       "Insufficienza respiratoria"
     ]
   },
 
-    "Ortopedia": {
+  "Ortopedia": {
     minAge: 30,
     maxAge: 85,
     pathologies: [
-    "Post protesi anca",
-    "Frattura esposta",
-    "Politrauma",
-    "Sindrome compartimentale",
-    "Post artroplastica ginocchio",
+      "Post protesi anca",
+      "Frattura esposta",
+      "Politrauma",
+      "Sindrome compartimentale",
+      "Post artroplastica ginocchio",
       "frattura femore",
       "rimozione vite",
       "trazione"
-  ]
-      },
+    ]
+  },
 
   "Chirurgia Generale": {
     minAge: 30,
     maxAge: 90,
     pathologies: [
-    "Post appendicectomia",
-    "Post colectomia",
-    "Occlusione intestinale",
-    "Peritonite",
-    "Post laparotomia",
-    "Fistola intestinale",
-    "Emorragia post operatoria"
-  ]
-     },
+      "Post appendicectomia",
+      "Post colectomia",
+      "Occlusione intestinale",
+      "Peritonite",
+      "Post laparotomia",
+      "Fistola intestinale",
+      "Emorragia post operatoria"
+    ]
+  },
 
-   "Ginecologia": {
+  "Ginecologia": {
     minAge: 18,
     maxAge: 40,
     pathologies: [
-    "Post ovarectomia",
-    "Post vulvectotomia",
-    "Post isteroannessiectomia",
-    "Aborto spontaneo",
-    "Emorragia post parto",
-    "Parto naturale",
-    "Parto cesareo"
-  ]
-     },
+      "Post ovarectomia",
+      "Post vulvectotomia",
+      "Post isteroannessiectomia",
+      "Aborto spontaneo",
+      "Emorragia post parto",
+      "Parto naturale",
+      "Parto cesareo"
+    ]
+  },
 
   "Cardiologia": {
     minAge: 30,
@@ -158,9 +158,9 @@ const ENVIRONMENTS: Record<string, EnvironmentConfig> = {
       "Scompenso cardiaco acuto",
       "Aritmia instabile",
       "Shock cardiogeno",
-    "NSTEMI",
-    "Blocco AV",
-    "Edema polmonare acuto",
+      "NSTEMI",
+      "Blocco AV",
+      "Edema polmonare acuto",
       "storm aritmico",
       "Insufficienza valvolare aortica",
       "Insufficienza valvolare mitralica",
@@ -177,78 +177,78 @@ const ENVIRONMENTS: Record<string, EnvironmentConfig> = {
       "PEG occlusa",
       "Catetere ostruito",
       "Ulcera da pressione",
-    "Ulcera da pressione avanzata",
-    "Febbre in paziente fragile",
+      "Ulcera da pressione avanzata",
+      "Febbre in paziente fragile",
       "grave stato nutrizionale",
       "mobilità compromessa",
       "disidratazione"
     ]
   },
 
-   "Pneumologia": { 
+  "Pneumologia": {
     minAge: 40,
     maxAge: 85,
     pathologies: [
-    "Embolia polmonare",
-    "Versamento pleurico",
-    "BPCO grave",
-    "Polmonite interstiziale",
-    "Insufficienza respiratoria cronica",
+      "Embolia polmonare",
+      "Versamento pleurico",
+      "BPCO grave",
+      "Polmonite interstiziale",
+      "Insufficienza respiratoria cronica",
       "Polmonite da COVID",
       "Polmonite da ab ingestis"
     ]
-   },    
+  },
 
-   "Neurologia": { 
+  "Neurologia": {
     minAge: 30,
     maxAge: 70,
     pathologies: [
-    "Ictus ischemico",
-    "Ictus emorragico",
-    "Crisi epilettica",
-    "Emorragia subaracnoidea",
-    "Trauma cranico",
-    "Miastenia gravis riacutizzata"
-  ]
-       },
+      "Ictus ischemico",
+      "Ictus emorragico",
+      "Crisi epilettica",
+      "Emorragia subaracnoidea",
+      "Trauma cranico",
+      "Miastenia gravis riacutizzata"
+    ]
+  },
 
-   "Oncologia": { 
+  "Oncologia": {
     minAge: 18,
     maxAge: 70,
     pathologies: [
-    "Neutropenia febbrile",
-    "Dolore oncologico severo",
-    "Ostruzione intestinale neoplastica",
-    "Sindrome da compressione midollare",
-    "Cachessia severa",
+      "Neutropenia febbrile",
+      "Dolore oncologico severo",
+      "Ostruzione intestinale neoplastica",
+      "Sindrome da compressione midollare",
+      "Cachessia severa",
       "chemioterapia",
       "radioterapia"
-  ]
-       },
+    ]
+  },
 
-    "Dialisi": { 
+  "Dialisi": {
     minAge: 40,
     maxAge: 90,
-    pathologies:[
-    "Ipotensione post dialisi",
-    "Accesso vascolare infetto",
-    "Iperkaliemia",
-    "Sovraccarico idrico",
-    "Crisi ipertensiva"
-  ]
-       },
+    pathologies: [
+      "Ipotensione post dialisi",
+      "Accesso vascolare infetto",
+      "Iperkaliemia",
+      "Sovraccarico idrico",
+      "Crisi ipertensiva"
+    ]
+  },
 
   "Ambulanza 118": {
     minAge: 20,
     maxAge: 100,
     pathologies: [
-    "Arresto cardiaco",
-    "Politrauma",
-    "Shock anafilattico",
-    "Infarto in atto",
-    "Insufficienza respiratoria acuta",
+      "Arresto cardiaco",
+      "Politrauma",
+      "Shock anafilattico",
+      "Infarto in atto",
+      "Insufficienza respiratoria acuta",
       "crisi epilettica"
-  ]
+    ]
   }
 };
 
@@ -261,7 +261,6 @@ const PERSONALITIES = [
   "spaventato"
 ];
 
-
 /* ================================
    UTIL
 ================================ */
@@ -270,10 +269,8 @@ function randomFrom<T>(arr: T[]): T {
   return arr[Math.floor(Math.random() * arr.length)];
 }
 
-function generateCoherentAge(env: any) {
-  return Math.floor(
-    Math.random() * (env.maxAge - env.minAge + 1)
-  ) + env.minAge;
+function generateCoherentAge(env: EnvironmentConfig) {
+  return Math.floor(Math.random() * (env.maxAge - env.minAge + 1)) + env.minAge;
 }
 
 function generateGender(age: number) {
@@ -286,18 +283,9 @@ function isPregnancyPossible(age: number, gender: string) {
 }
 
 function initialSeverity(pathology: string): number {
-  if (
-    pathology.toLowerCase().includes("shock") ||
-    pathology.toLowerCase().includes("ards") ||
-    pathology.toLowerCase().includes("emorragia")
-  ) return 4;
-
-  if (
-    pathology.toLowerCase().includes("infarto") ||
-    pathology.toLowerCase().includes("sepsi") ||
-    pathology.toLowerCase().includes("ictus")
-  ) return 3;
-
+  const p = pathology.toLowerCase();
+  if (p.includes("shock") || p.includes("ards") || p.includes("emorragia")) return 4;
+  if (p.includes("infarto") || p.includes("sepsi") || p.includes("ictus")) return 3;
   return 2;
 }
 
@@ -319,14 +307,18 @@ function vitalsBySeverity(severity: number) {
 ================================ */
 
 async function getOrCreateAdaptiveProfile(userId: string) {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("simulation_profiles")
     .select("*")
     .eq("user_id", userId)
     .maybeSingle();
 
+  if (error) {
+    console.error("simulation_profiles select error", error);
+  }
+
   if (!data) {
-    const { data: created } = await supabase
+    const { data: created, error: insertError } = await supabase
       .from("simulation_profiles")
       .insert({
         user_id: userId,
@@ -342,6 +334,12 @@ async function getOrCreateAdaptiveProfile(userId: string) {
       })
       .select()
       .single();
+
+    if (insertError) {
+      console.error("simulation_profiles insert error", insertError);
+      throw insertError;
+    }
+
     return created;
   }
 
@@ -353,16 +351,18 @@ function updateBehaviorMetrics(profile: any, choice: string | undefined) {
 
   const behavior = profile.behavior || {};
 
-  if (choice.toLowerCase().includes("ossigen"))
+  const c = choice.toLowerCase();
+
+  if (c.includes("ossigen"))
     behavior.airwayFocus = (behavior.airwayFocus || 0) + 1;
 
-  if (choice.toLowerCase().includes("pressione") || choice.toLowerCase().includes("fluid"))
+  if (c.includes("pressione") || c.includes("fluid"))
     behavior.hemodynamicNeglect = Math.max((behavior.hemodynamicNeglect || 0) - 1, 0);
 
-  if (choice.toLowerCase().includes("diures"))
+  if (c.includes("diures"))
     behavior.renalNeglect = Math.max((behavior.renalNeglect || 0) - 1, 0);
 
-  if (choice.toLowerCase().includes("attendi"))
+  if (c.includes("attendi"))
     behavior.escalationDelay = (behavior.escalationDelay || 0) + 1;
 
   return behavior;
@@ -419,7 +419,6 @@ Dispositivi presenti
 R – Raccomandazione
 Cosa monitorare ora.
 
-
 VIETATO ASSOLUTO:
 - NANDA
 - NIC
@@ -433,7 +432,7 @@ Solo JSON valido.
   "phase": "string",
   "turn": number,
   "patientUpdate": "string",
-  "vitals": { hr, bp, rr, spo2, temp, consciousness },
+  "vitals": { "hr": number, "bp": "string", "rr": number, "spo2": number, "temp": number, "consciousness": "string" },
   "availableActions": [
     { "id": "A", "label": "string" },
     { "id": "B", "label": "string" }
@@ -457,7 +456,7 @@ async function createGame(userId: string) {
   const pregnant = isPregnancyPossible(age, gender);
   const severity = initialSeverity(pathology);
 
-  const { data: game } = await supabase
+  const { data: game, error } = await supabase
     .from("simulation_games")
     .insert({
       user_id: userId,
@@ -476,10 +475,20 @@ async function createGame(userId: string) {
     .select()
     .single();
 
-  await supabase.from("simulation_state").insert({
+  if (error || !game) {
+    console.error("simulation_games insert error", error);
+    throw error || new Error("Game creation failed");
+  }
+
+  const { error: stateError } = await supabase.from("simulation_state").insert({
     game_id: game.id,
     vitals: vitalsBySeverity(severity)
   });
+
+  if (stateError) {
+    console.error("simulation_state insert error", stateError);
+    throw stateError;
+  }
 
   return game;
 }
@@ -489,46 +498,91 @@ async function createGame(userId: string) {
 ================================ */
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  if (req.method !== "POST")
+  // CORS base (se ti serve da frontend browser diretto)
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+
+  if (req.method === "OPTIONS") {
+    return res.status(200).end();
+  }
+
+  if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
+  }
+
+  if (!OPENAI_API_KEY) {
+    return res.status(500).json({ error: "Missing OPENAI_API_KEY" });
+  }
 
   try {
-    const { action, userId, gameId, choice } = req.body;
+    const { action, userId, gameId, choice } = req.body || {};
+
+    if (!userId) {
+      return res.status(400).json({ error: "Missing userId" });
+    }
+
+    if (action !== "start" && action !== "step") {
+      return res.status(400).json({ error: "Invalid action" });
+    }
 
     const profile = await getOrCreateAdaptiveProfile(userId);
 
-    let game;
+    let game: any;
 
     if (action === "start") {
       game = await createGame(userId);
     } else {
-      const { data } = await supabase
+      if (!gameId) {
+        return res.status(400).json({ error: "Missing gameId for step action" });
+      }
+
+      const { data, error } = await supabase
         .from("simulation_games")
         .select("*")
         .eq("id", gameId)
         .single();
+
+      if (error || !data) {
+        console.error("simulation_games fetch error", error);
+        return res.status(404).json({ error: "Game not found" });
+      }
+
       game = data;
     }
 
-    const { data: state } = await supabase
+    const { data: state, error: stateError } = await supabase
       .from("simulation_state")
       .select("*")
       .eq("game_id", game.id)
       .single();
 
-    const turn = action === "step" ? game.turn + 1 : 1;
+    if (stateError || !state) {
+      console.error("simulation_state fetch error", stateError);
+      return res.status(404).json({ error: "Simulation state not found" });
+    }
 
-    await supabase
+    const turn = action === "step" ? (game.turn || 1) + 1 : 1;
+
+    const { error: updateGameError } = await supabase
       .from("simulation_games")
       .update({ turn })
       .eq("id", game.id);
 
+    if (updateGameError) {
+      console.error("simulation_games update error", updateGameError);
+    }
+
     const updatedBehavior = updateBehaviorMetrics(profile, choice);
 
-    await supabase
+    const { error: updateProfileError } = await supabase
       .from("simulation_profiles")
       .update({ behavior: updatedBehavior })
       .eq("user_id", userId);
+
+    if (updateProfileError) {
+      console.error("simulation_profiles update error", updateProfileError);
+    }
 
     const adaptiveSeverity = adaptiveDifficulty(profile, game.context.severity);
 
@@ -545,7 +599,7 @@ Scelta precedente: ${choice || "Nessuna"}
 Parametri attuali: ${JSON.stringify(state.vitals)}
 
 Adatta pressione e complessità allo stile decisionale implicito.
-`;
+`.trim();
 
     const openaiRes = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
@@ -563,17 +617,35 @@ Adatta pressione e complessità allo stile decisionale implicito.
       })
     });
 
-    const raw = await openaiRes.json();
-    const content = raw.choices?.[0]?.message?.content;
+    if (!openaiRes.ok) {
+      const text = await openaiRes.text();
+      console.error("OpenAI error", openaiRes.status, text);
+      return res.status(500).json({ error: "OpenAI API error", detail: text });
+    }
 
-    const simData = JSON.parse(content);
+    const raw = await openaiRes.json();
+    const content = raw?.choices?.[0]?.message?.content;
+
+    if (!content) {
+      console.error("No content from OpenAI", raw);
+      return res.status(500).json({ error: "No content from OpenAI" });
+    }
+
+    let simData: any;
+    try {
+      simData = JSON.parse(content);
+    } catch (e) {
+      console.error("Failed to parse OpenAI JSON content", content);
+      return res.status(500).json({ error: "Invalid JSON from model", raw: content });
+    }
 
     const minTurns = 5;
     const maxTurns = adaptiveSeverity >= 4 ? 7 : 6;
 
     if (turn < minTurns) simData.outcome = "ongoing";
-    if (turn < maxTurns && simData.outcome !== "improved" && simData.outcome !== "critical")
+    if (turn < maxTurns && simData.outcome !== "improved" && simData.outcome !== "critical") {
       simData.outcome = "ongoing";
+    }
 
     return res.status(200).json({
       type: simData.outcome === "ongoing" ? "step" : "debrief",
@@ -583,9 +655,8 @@ Adatta pressione e complessità allo stile decisionale implicito.
       adaptiveSeverity,
       ...simData
     });
-
   } catch (err) {
-    console.error(err);
+    console.error("Simulation error", err);
     return res.status(500).json({ error: "Simulation error" });
   }
 }
