@@ -8,151 +8,361 @@ const OPENAI_API_KEY = process.env.OPENAI_API_KEY!;
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
 // ─────────────────────────────────────────────
-// SYSTEM PROMPT – SIMULATORE CLINICO ADATTIVO
+// WORLD STRUCTURE COERENTE
 // ─────────────────────────────────────────────
+
+type EnvironmentConfig = {
+  minAge: number;
+  maxAge: number;
+  pathologies: string[];
+};
+
+const ENVIRONMENTS: Record<string, EnvironmentConfig> = {
+  "Pronto Soccorso": {
+    minAge: 18,
+    maxAge: 95,
+    pathologies: [
+      "Dolore toracico sospetto SCA",
+      "Sepsi",
+      "Trauma cranico",
+      "Trauma addominale",
+      "Shock anafilattico",
+      "Ictus ischemico",
+      "Chetoacidosi diabetica",
+      "Addome acuto",
+      "Crisi epilettica",       
+    "Sepsi origine ignota",
+    "Polmonite grave",
+    "Trauma toracico",
+    "Emorragia digestiva",
+    "Intossicazione farmacologica",
+    "Ritenzione urinaria acuta",
+      "Riacutizzazione BPCO",
+      "Dispnea",
+      "Emorragia"
+      ]
+  },
+
+  "Terapia Intensiva Generale": {
+    minAge: 18,
+    maxAge: 95,
+    pathologies: [
+      "Shock settico",
+      "ARDS",
+      "Insufficienza multiorgano",
+      "Post operatorio complicato",
+      "Emorragia massiva",
+    "Insufficienza respiratoria acuta",
+    "Sepsi addominale",
+    "Politrauma",
+    "Pancreatite necrotica",
+    "Insufficienza epatica acuta",
+      "Insufficienza renale acuta"
+    ]
+  },
+
+  "Terapia Intensiva Cardiotoracovascolare": {
+    minAge: 30,
+    maxAge: 80,
+    pathologies: [
+      "Shock settico",
+      "Shock cardiogeno",
+      "Insufficienza respiratoria acuta",
+      "Post CABG",
+      "Post SVA"
+    "Post SVM",
+    "Post SVT",
+    "Rottura di cuore",
+    "Deiscenza ferita",
+    "Dissezione aortica tipo A"
+    ]
+  },  
+
+  "Terapia Intensiva Neonatale": {
+    minAge: 0,
+    maxAge: 1,
+    pathologies: [
+      "Prematurità con distress respiratorio",
+      "Sepsi neonatale",
+      "Sindrome da aspirazione di meconio",
+    "Ittero patologico"
+    ]
+  },
+
+  "Geriatria": {
+    minAge: 70,
+    maxAge: 100,
+    pathologies: [
+      "Frattura femore",
+      "Delirium",
+      "Disidratazione severa",
+      "Polmonite ab ingestis",
+      "Ulcera da pressione infetta",
+    "Malnutrizione",
+    "Scompenso cardiaco",
+    "Declino cognitivo acuto",
+      "Riacutizzazione BPCO",
+      "Insufficienza renale acuta",
+      "Insufficienza respiratoria"
+    ]
+  },
+
+    "Ortopedia": {
+    minAge: 30,
+    maxAge: 85,
+    pathologies: [
+    "Post protesi anca",
+    "Frattura esposta",
+    "Politrauma",
+    "Sindrome compartimentale",
+    "Post artroplastica ginocchio",
+      "frattura femore",
+      "rimozione vite",
+      "trazione"
+  ]
+      },
+
+  "Chirurgia Generale": {
+    minAge: 30,
+    maxAge: 90,
+    pathologies: [
+    "Post appendicectomia",
+    "Post colectomia",
+    "Occlusione intestinale",
+    "Peritonite",
+    "Post laparotomia",
+    "Fistola intestinale",
+    "Emorragia post operatoria"
+  ]
+     },
+
+   "Ginecologia": {
+    minAge: 18,
+    maxAge: 40,
+    pathologies: [
+    "Post ovarectomia",
+    "Post vulvectotomia",
+    "Post isteroannessiectomia",
+    "Aborto spontaneo",
+    "Emorragia post parto",
+    "Parto naturale",
+    "Parto cesareo"
+  ]
+     },
+
+  "Cardiologia": {
+    minAge: 30,
+    maxAge: 85,
+    pathologies: [
+      "Infarto STEMI",
+      "Scompenso cardiaco acuto",
+      "Aritmia instabile",
+      "Shock cardiogeno",
+    "NSTEMI",
+    "Blocco AV",
+    "Edema polmonare acuto",
+      "storm aritmico",
+      "Insufficienza valvolare aortica",
+      "Insufficienza valvolare mitralica",
+      "Insufficienza valvolare tricuspide",
+      "Ematoma intramurario",
+      "Dissezione tipo B"
+    ]
+  },
+
+  "Domicilio": {
+    minAge: 25,
+    maxAge: 100,
+    pathologies: [
+      "PEG occlusa",
+      "Catetere ostruito",
+      "Ulcera da pressione",
+    "Ulcera da pressione avanzata",
+    "Febbre in paziente fragile",
+      "grave stato nutrizionale",
+      "mobilità compromessa",
+      "disidratazione"
+    ]
+  },
+
+   "Pneumologia": { 
+    minAge: 40,
+    maxAge: 85,
+    pathologies: [
+    "Embolia polmonare",
+    "Versamento pleurico",
+    "BPCO grave",
+    "Polmonite interstiziale",
+    "Insufficienza respiratoria cronica",
+      "Polmonite da COVID",
+      "Polmonite da ab ingestis"
+    ]
+   },    
+
+   "Neurologia": { 
+    minAge: 30,
+    maxAge: 70,
+    pathologies: [
+    "Ictus ischemico",
+    "Ictus emorragico",
+    "Crisi epilettica",
+    "Emorragia subaracnoidea",
+    "Trauma cranico",
+    "Miastenia gravis riacutizzata"
+  ]
+       },
+
+   "Oncologia": { 
+    minAge: 18,
+    maxAge: 70,
+    pathologies: [
+    "Neutropenia febbrile",
+    "Dolore oncologico severo",
+    "Ostruzione intestinale neoplastica",
+    "Sindrome da compressione midollare",
+    "Cachessia severa",
+      "chemioterapia",
+      "radioterapia"
+  ]
+       },
+
+    "Dialisi": { 
+    minAge: 40,
+    maxAge: 90,
+    pathologies:[
+    "Ipotensione post dialisi",
+    "Accesso vascolare infetto",
+    "Iperkaliemia",
+    "Sovraccarico idrico",
+    "Crisi ipertensiva"
+  ]
+       },
+
+  "Ambulanza 118": {
+    minAge: 20,
+    maxAge: 100,
+    pathologies: [
+    "Arresto cardiaco",
+    "Politrauma",
+    "Shock anafilattico",
+    "Infarto in atto",
+    "Insufficienza respiratoria acuta",
+      "crisi epilettica"
+  ]
+};
+
+const PERSONALITIES = [
+  "collaborante",
+  "ansioso",
+  "aggressivo",
+  "confuso",
+  "negante",
+  "spaventato"
+];
+
+// ─────────────────────────────────────────────
+// UTIL
+// ─────────────────────────────────────────────
+
+function randomFrom<T>(arr: T[]): T {
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+
+function generateCoherentAge(env: EnvironmentConfig) {
+  return Math.floor(
+    Math.random() * (env.maxAge - env.minAge + 1)
+  ) + env.minAge;
+}
+
+function generateGender(age: number) {
+  if (age < 1) return "N/D";
+  return Math.random() > 0.5 ? "M" : "F";
+}
+
+function isPregnancyPossible(age: number, gender: string) {
+  return gender === "F" && age >= 16 && age <= 45 && Math.random() < 0.2;
+}
+
+function initialSeverity(pathology: string): number {
+  if (
+    pathology.includes("Shock") ||
+    pathology.includes("ARDS") ||
+    pathology.includes("Emorragia")
+  ) return 4;
+
+  if (
+    pathology.includes("Infarto") ||
+    pathology.includes("Sepsi") ||
+    pathology.includes("Ictus")
+  ) return 3;
+
+  return 2;
+}
+
+function vitalsBySeverity(severity: number) {
+  if (severity <= 2)
+    return { hr: 88, bp: "125/75", rr: 16, spo2: 98, temp: 36.8, consciousness: "vigile" };
+
+  if (severity === 3)
+    return { hr: 105, bp: "100/60", rr: 22, spo2: 94, temp: 38, consciousness: "vigile" };
+
+  if (severity === 4)
+    return { hr: 125, bp: "90/55", rr: 28, spo2: 90, temp: 39, consciousness: "confuso" };
+
+  return { hr: 140, bp: "80/45", rr: 32, spo2: 85, temp: 39.5, consciousness: "soporoso" };
+}
+
+// ─────────────────────────────────────────────
+// SYSTEM PROMPT AAA + SBAR
+// ─────────────────────────────────────────────
+
 const SYSTEM_PROMPT = `
-Sei il motore narrativo di un simulatore clinico infermieristico ad alta fedeltà, rivolto a studenti del 3° anno.
+Sei il motore narrativo di una simulazione clinica infermieristica realistica.
 
-Non stai generando un caso.
-Stai gestendo un turno reale.
-Il tuo compito è generare pressione, incertezza, priorità concorrenti
-e conseguenze credibili nel tempo.
-La simulazione deve sembrare viva.
-La simulazione deve svilupparsi attraverso vari step.
-Non può terminare rapidamente.
-Le decisioni, gli interventi e le manovre devono essere infermieristiche, non mediche. Se si tratta di manovre mediche, specifica che bisogna fare l’assistenza infermieristica a quella manovra.
+REGOLE FERREE:
+- Non cambiare paziente.
+- Non cambiare reparto.
+- Minimo 5 turni.
+- Se gravità alta può arrivare a 7.
+- Pressione progressiva.
+- Nessuna spiegazione didattica.
 
-────────────────────────
-IDENTITÀ DEL MONDO
-────────────────────────
-Ogni nuova partita deve svolgersi in un ambiente potenzialmente diverso:
-reparto, terapia intensiva, pronto soccorso, ambulanza, territorio, RSA,
-ambulatorio, luogo pubblico.
-Prendi in considerazione tutti i reparti ospedalieri (medicina, geriatria, chirurgia, urologia, terapia intensiva di qualsiasi specialistica, pronto soccorso, pneumologia, ortopedia, cardiologia, reparti di imaging come TAC, Radiografia, RMN, sala operatoria di qualsiasi specialistica, ecc. e tutto quello che ti viene in mente).
-Ogni nuovo caso deve prendere in considerazione tutti i tipi di pazienti (post operato di tutte le specialità, anziano, pediatrico, giovane, donna, uomo, gravida, psichiatrico, trauma,  problematiche cardiache, problemi respiratori, scompensi, BPCO, ecc. e tutto quello che ti viene in mente.)
+PRIMO TURNO OBBLIGATORIO:
+Devi generare briefing SBAR completo.
 
-Evita ripetizioni rispetto alle simulazioni precedenti.
-────────────────────────
-IDENTITÀ DEL PAZIENTE
-────────────────────────
-Quando il contesto lo consente, fornisci:
-età, motivo di ricovero, comorbilità essenziali.
+S – Situazione
+Perché è ricoverato.
 
-Se non realistico, limita le informazioni.
+B – Background
+Cosa è successo prima.
 
-────────────────────────
-STRUTTURA DELLA PARTITA
-────────────────────────
-Una simulazione NON può concludersi prima di 5 step.
-Idealmente 6 o più.
+A – Assessment
+Stato neurologico
+Respirazione (spontanea? NIV? Intubato?)
+Emodinamica
+Diuresi
+Alimentazione (orale? PEG? SNG? Digiuno?)
+Mobilità
+Lesioni da pressione
+Accessi vascolari
+Dispositivi presenti
 
-Non terminare mai al primo step anche se la scelta è ottima.
+R – Raccomandazione
+Cosa monitorare ora.
 
-────────────────────────
-MECCANICA PRINCIPALE
-────────────────────────
-Ogni step deve introdurre almeno UNO dei seguenti:
+VIETATO ASSOLUTO:
+- NANDA
+- NIC
+- NOC
+- Linguaggio scolastico
 
-• nuovo rischio
-• peggioramento inatteso
-• informazione ambigua
-• distrazione
-• conflitto di priorità
-• conseguenza di decisione precedente
-• evento latente che emerge
-Tutti sullo stesso paziente! Quando hai iniziato un caso su un paziente, evolvi quel caso, non cambiare paziente/situazione.
+Solo JSON.
 
-────────────────────────
-PRIORITÀ IN CONFLITTO
-────────────────────────
-Le azioni disponibili devono competere tra loro.
-Sceglierne una implica ritardare o rinunciare alle altre.
-Se lo studente si concentra su un problema, qualcos’altro può peggiorare.
-
-Evita liste generiche di buone pratiche.
-
-────────────────────────
-EFFETTI RITARDATI
-────────────────────────
-Alcune decisioni producono effetti dopo 1–3 turni.
-Mantieni memoria.
-
-────────────────────────
-TEMPO
-────────────────────────
-Il tempo passa sempre.
-Anche il non scegliere una azione modifica il rischio.
-
-────────────────────────
-DINAMICA DEL PAZIENTE
-────────────────────────
-Il paziente può:
-migliorare, peggiorare, stabilizzarsi temporaneamente,
-mostrare falsi segnali rassicuranti.
-
-────────────────────────
-COMPLESSITÀ
-────────────────────────
-Introduci rumore realistico:
-allarmi secondari, richieste del medico, familiari, problemi tecnici.
-
-────────────────────────
-INFORMAZIONI
-────────────────────────
-Non dare tutto subito.
-Alcuni dati compaiono solo se il discente presta attenzione.
-
-────────────────────────
-DIFFICOLTÀ
-────────────────────────
-La pressione deve aumentare con gli step.
-
-SCELTE
-────────────────────────
-Fornisci da 2 fino a 4 opzioni.
-Devono rappresentare alternative realistiche.
-NON deve essere evidente quella migliore.
-
-────────────────────────
-NESSUN FEEDBACK
-────────────────────────
-Durante il gioco NON dire se è giusto o sbagliato.
-Solo conseguenze cliniche.
-
-────────────────────────
-OBIETTIVO NASCOSTO
-────────────────────────
-Allenare:
-- priorità
-- anticipazione
-- gestione del carico
-- pensiero critico
-
-────────────────────────
-VIETATO
-────────────────────────
-- spiegazioni didattiche
-- morale
-- suggerimenti
-- NANDA NIC NOC
-
-────────────────────────
-LINGUA
-────────────────────────
-Italiano clinico realistico.
-
-────────────────────────
-JSON
-────────────────────────
 {
   "phase": "string",
   "turn": number,
-  "environment": "string",
   "patientUpdate": "string",
   "vitals": { hr, bp, rr, spo2, temp, consciousness },
-  "newFindings": [],
-  "interruptions": [],
-  "pendingEffects": [],
   "availableActions": [
     { "id": "A", "label": "string" },
     { "id": "B", "label": "string" }
@@ -160,225 +370,104 @@ JSON
   "outcome": "ongoing | improved | critical | stabilized",
   "xpDelta": number
 }
-
-REGOLE:
-Se turn < 5 → outcome = ongoing.
-Nessun testo esterno.
-Solo JSON.
 `.trim();
 
 // ─────────────────────────────────────────────
-// RAG BASE
+// CREATE GAME COERENTE
 // ─────────────────────────────────────────────
-async function getRagContext(): Promise<string> {
-  const { data } = await supabase
-    .from("clinical_knowledge_base")
-    .select("content")
-    .limit(6);
 
-  return data?.map((d: any) => d.content).join("\n---\n") || "";
-}
+async function createGame(userId: string) {
+  const environmentName = randomFrom(Object.keys(ENVIRONMENTS));
+  const env = ENVIRONMENTS[environmentName];
 
-// ─────────────────────────────────────────────
-// XP SYSTEM
-// ─────────────────────────────────────────────
-async function addXP(userId: string, xp: number) {
-  if (!xp) return;
+  const pathology = randomFrom(env.pathologies);
+  const age = generateCoherentAge(env);
+  const gender = generateGender(age);
+  const pregnant = isPregnancyPossible(age, gender);
 
-  const { data } = await supabase
-    .from("simulation_profiles")
-    .select("xp, level")
-    .eq("user_id", userId)
-    .maybeSingle();
+  const severity = initialSeverity(pathology);
 
-  if (!data) {
-    await supabase.from("simulation_profiles").insert({
+  const { data: game } = await supabase
+    .from("simulation_games")
+    .insert({
       user_id: userId,
-      xp,
-      level: 1
-    });
-    return;
-  }
+      environment: environmentName,
+      patient_name: "Paziente " + Math.floor(Math.random() * 9999),
+      patient_age: age,
+      patient_gender: gender,
+      context: {
+        pathology,
+        personality: randomFrom(PERSONALITIES),
+        severity,
+        pregnant
+      },
+      turn: 1
+    })
+    .select()
+    .single();
 
-  const newXP = (data.xp || 0) + xp;
-  const newLevel = Math.floor(newXP / 100) + 1;
+  await supabase.from("simulation_state").insert({
+    game_id: game.id,
+    vitals: vitalsBySeverity(severity)
+  });
 
-  await supabase
-    .from("simulation_profiles")
-    .update({ xp: newXP, level: newLevel })
-    .eq("user_id", userId);
-}
-
-async function getProfile(userId: string) {
-  const { data } = await supabase
-    .from("simulation_profiles")
-    .select("xp, level")
-    .eq("user_id", userId)
-    .maybeSingle();
-
-  return {
-    xpTotal: data?.xp || 0,
-    level: data?.level || 1
-  };
-}
-
-// ─────────────────────────────────────────────
-// RISK LEVEL
-// ─────────────────────────────────────────────
-function inferRiskLevel(v: any): "low" | "medium" | "high" {
-  if (!v) return "medium";
-
-  const hr = Number(v.hr || 0);
-  const rr = Number(v.rr || 0);
-  const spo2 = Number(v.spo2 || 0);
-  const temp = Number(v.temp || 0);
-  const systolic = parseInt(String(v.bp || "0/0").split("/")[0], 10);
-
-  if (spo2 < 90 || systolic < 90 || hr > 130 || rr > 30 || temp > 39.5 || temp < 35)
-    return "high";
-
-  if (spo2 < 94 || systolic < 100 || hr > 110 || rr > 24 || temp > 38.5)
-    return "medium";
-
-  return "low";
-}
-
-// ─────────────────────────────────────────────
-// DEBRIEF BUILDER (BACKEND)
-// ─────────────────────────────────────────────
-async function buildDebrief(userId: string, simData: any, history: string[]) {
-  const profile = await getProfile(userId);
-
-  const outcome = simData.outcome;
-  const lastUpdate = simData.patientUpdate || "";
-  const findings = Array.isArray(simData.newFindings) ? simData.newFindings : [];
-
-  let summary = "";
-  let strengths: string[] = [];
-  let priorityErrors: string[] = [];
-  let missedRisks: string[] = [];
-  let clinicalReasoning: string[] = [];
-  let whatWouldHappenNext = "";
-
-  if (outcome === "improved") {
-    summary = `Il paziente ha mostrato un miglioramento clinico. ${lastUpdate}`;
-    strengths = [
-      "Hai riconosciuto precocemente i segni di instabilità.",
-      "Hai scelto interventi coerenti con le priorità cliniche.",
-      "Hai monitorato in modo sistematico i parametri vitali."
-    ];
-    priorityErrors = [];
-    missedRisks = findings.length ? ["Alcuni reperti non sono stati integrati pienamente."] : [];
-    clinicalReasoning = [
-      "Il ragionamento clinico è stato coerente con la situazione.",
-      "Hai mantenuto una buona sequenza decisionale."
-    ];
-    whatWouldHappenNext =
-      "Il paziente potrebbe consolidare il miglioramento con monitoraggio continuo.";
-  }
-
-  if (outcome === "critical") {
-    summary = `Il quadro clinico è evoluto verso una condizione critica. ${lastUpdate}`;
-    strengths = ["Hai mantenuto un monitoraggio costante."];
-    priorityErrors = [
-      "Alcune priorità critiche non sono state affrontate tempestivamente.",
-      "La sequenza degli interventi non ha rispecchiato la gravità del quadro."
-    ];
-    missedRisks = findings.length
-      ? ["Alcuni reperti indicavano un rischio imminente non riconosciuto."]
-      : ["Il deterioramento non è stato anticipato."];
-    clinicalReasoning = [
-      "Il ragionamento clinico è stato presente ma non sempre allineato alla gravità.",
-      "Alcuni segni di allarme non sono stati interpretati come prioritari."
-    ];
-    whatWouldHappenNext =
-      "In uno scenario reale sarebbe necessaria un'escalation assistenziale urgente.";
-  }
-
-  if (outcome === "stabilized") {
-    summary = `Il paziente ha raggiunto una stabilizzazione relativa. ${lastUpdate}`;
-    strengths = [
-      "Hai ottenuto una stabilizzazione dei parametri vitali.",
-      "Hai mantenuto un monitoraggio regolare."
-    ];
-    priorityErrors = ["Alcune aree di rischio residuo non sono state affrontate completamente."];
-    missedRisks = findings.length ? ["Alcuni reperti suggeriscono rischi evolutivi."] : [];
-    clinicalReasoning = [
-      "Il ragionamento clinico ha evitato un deterioramento.",
-      "La gestione delle priorità è stata adeguata."
-    ];
-    whatWouldHappenNext =
-      "Con monitoraggio continuo il paziente potrebbe progredire verso un miglioramento.";
-  }
-
-  // Aggiungiamo riflessione sulla storia
-  if (history.length > 0) {
-    clinicalReasoning.push(
-      `La sequenza delle azioni (${history.join(" → ")}) mostra il tuo stile decisionale.`
-    );
-  }
-
-  return {
-    type: "debrief",
-    summary,
-    strengths,
-    missedRisks,
-    priorityErrors,
-    communicationNotes: [], // <── IMPORTANTE PER EVITARE CRASH
-    clinicalReasoning,
-    whatWouldHappenNext,
-    xpTotal: profile.xpTotal,
-    level: profile.level
-  };
+  return game;
 }
 
 // ─────────────────────────────────────────────
 // HANDLER
 // ─────────────────────────────────────────────
-export default async function handler(req: VercelRequest, res: VercelResponse) {
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
-  if (req.method === "OPTIONS") return res.status(200).end();
-  if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  if (req.method !== "POST")
+    return res.status(405).json({ error: "Method not allowed" });
 
   try {
-    const { action, userId, history, choice } = req.body;
+    const { action, userId, gameId, choice } = req.body;
 
-    if (!userId) return res.status(400).json({ error: "Missing userId" });
-
-    const ragContext = await getRagContext();
-
-    let userMessage = "";
+    let game;
 
     if (action === "start") {
-      userMessage = `
-Inizia una nuova simulazione clinica.
-Genera fase iniziale.
+      game = await createGame(userId);
+    } else {
+      const { data } = await supabase
+        .from("simulation_games")
+        .select("*")
+        .eq("id", gameId)
+        .single();
+      game = data;
+    }
 
-Materiale di riferimento:
-${ragContext}
-`;
-    } else if (action === "step") {
-      userMessage = `
-Simulazione in corso.
+    const { data: state } = await supabase
+      .from("simulation_state")
+      .select("*")
+      .eq("game_id", game.id)
+      .single();
 
-STORIA PRECEDENTE:
-${JSON.stringify(history || [])}
+    const turn = action === "step" ? game.turn + 1 : 1;
 
-AZIONE SCELTA:
-${choice}
+    await supabase
+      .from("simulation_games")
+      .update({ turn })
+      .eq("id", game.id);
+
+    const userMessage = `
+Reparto: ${game.environment}
+Età: ${game.patient_age}
+Genere: ${game.patient_gender}
+Gravidanza: ${game.context?.pregnant ? "SI" : "NO"}
+Patologia: ${game.context?.pathology}
+Gravità: ${game.context?.severity}
+Turno: ${turn}
+
+Parametri:
+${JSON.stringify(state.vitals)}
+
+Scelta precedente: ${choice || "Nessuna"}
 
 Evolvi la situazione.
 `;
-    } else {
-      return res.status(400).json({ error: "Invalid action" });
-    }
 
-    // ─────────────────────────────────────────────
-    // OPENAI CALL
-    // ─────────────────────────────────────────────
     const openaiRes = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -387,7 +476,7 @@ Evolvi la situazione.
       },
       body: JSON.stringify({
         model: "gpt-5-nano",
-        temperature: 1,
+        temperature: 1.1,
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
           { role: "user", content: userMessage }
@@ -395,87 +484,24 @@ Evolvi la situazione.
       })
     });
 
-    const raw = await openaiRes.text();
+    const raw = await openaiRes.json();
+    const content = raw.choices?.[0]?.message?.content;
 
-    let parsed: any;
-    try {
-      parsed = JSON.parse(raw);
-    } catch {
-      return res.status(500).json({ error: "Invalid JSON from OpenAI", raw });
-    }
+    const simData = JSON.parse(content);
 
-    const content = parsed?.choices?.[0]?.message?.content;
-    if (!content) return res.status(500).json({ error: "No content", raw });
+    const minTurns = 5;
+    if (turn < minTurns) simData.outcome = "ongoing";
 
-    const cleaned = content
-      .trim()
-      .replace(/```json/g, "")
-      .replace(/```/g, "");
-
-    let simData: any;
-    try {
-      simData = JSON.parse(cleaned);
-    } catch {
-      return res.status(500).json({ error: "Invalid simulation JSON", rawContent: cleaned });
-    }
-
-    // Fallback vitals
-    if (!simData.vitals) {
-      simData.vitals = {
-        hr: 90,
-        bp: "120/70",
-        rr: 16,
-        spo2: 98,
-        temp: 36.8,
-        consciousness: "vigile"
-      };
-    }
-
-    // Fallback arrays
-    if (!Array.isArray(simData.newFindings)) simData.newFindings = [];
-    if (!Array.isArray(simData.availableActions)) {
-      simData.availableActions = [
-        { id: "A", label: "Rivaluta il paziente" },
-        { id: "B", label: "Richiedi supporto" },
-        { id: "C", label: "Controlla i parametri" },
-        { id: "D", label: "Documenta" }
-      ];
-    }
-
-    // Risk level
-    if (!simData.riskLevel) {
-      simData.riskLevel = inferRiskLevel(simData.vitals);
-    }
-
-    const xpDelta = Number(simData.xpDelta || 0);
-    await addXP(userId, xpDelta);
-
-    // ─────────────────────────────────────────────
-    // STEP NORMALE
-    // ─────────────────────────────────────────────
-    if (!simData.outcome || simData.outcome === "ongoing") {
-      return res.status(200).json({
-        type: "step",
-        phase: simData.phase || "Fase iniziale",
-        environment: simData.environment || "Reparto",
-        patientUpdate: simData.patientUpdate || "",
-        vitals: simData.vitals,
-        newFindings: simData.newFindings,
-        availableActions: simData.availableActions,
-        outcome: "ongoing",
-        xpDelta,
-        riskLevel: simData.riskLevel
-      });
-    }
-
-    // ─────────────────────────────────────────────
-    // DEBRIEF FINALE
-    // ─────────────────────────────────────────────
-    const debrief = await buildDebrief(userId, simData, history || []);
-    return res.status(200).json(debrief);
+    return res.status(200).json({
+      type: simData.outcome === "ongoing" ? "step" : "debrief",
+      gameId: game.id,
+      environment: game.environment,
+      turn,
+      ...simData
+    });
 
   } catch (err) {
-    console.error("Simulation error:", err);
+    console.error(err);
     return res.status(500).json({ error: "Simulation error" });
   }
 }
